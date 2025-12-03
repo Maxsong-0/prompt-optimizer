@@ -1,11 +1,16 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { isSupabaseEnabled } from './config'
 
 /**
  * 创建 Supabase 服务器端客户端
  * 用于服务器组件、Server Actions 和 Route Handlers
  */
 export async function createClient() {
+  if (!isSupabaseEnabled()) {
+    throw new Error('Supabase is not configured. Please set environment variables.')
+  }
+  
   const cookieStore = await cookies()
 
   return createServerClient(
