@@ -1,7 +1,14 @@
-import { type NextRequest } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
 export async function middleware(request: NextRequest) {
+  // 检查环境变量是否存在
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    console.warn('Supabase environment variables are not set. Skipping auth middleware.')
+    // 如果环境变量缺失，跳过 Supabase 中间件，继续处理请求
+    return NextResponse.next()
+  }
+  
   return await updateSession(request)
 }
 
