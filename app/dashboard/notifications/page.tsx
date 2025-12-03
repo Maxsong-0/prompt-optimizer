@@ -98,6 +98,7 @@ const notificationIcons: Record<string, typeof Bell> = {
 
 export default function NotificationsPage() {
   const { t, language } = useLanguage()
+  const currentLanguage = language || 'en'
   const [notifications, setNotifications] = useState(mockNotifications)
   const [showSettings, setShowSettings] = useState(false)
 

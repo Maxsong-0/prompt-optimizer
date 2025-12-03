@@ -40,6 +40,7 @@ const itemVariants = {
 
 export default function ProfilePage() {
   const { t, language } = useLanguage()
+  const currentLanguage = language || 'en'
   const [displayName, setDisplayName] = useState("John Doe")
   const [email, setEmail] = useState("john@example.com")
   const [bio, setBio] = useState("")

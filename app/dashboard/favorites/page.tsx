@@ -187,6 +187,7 @@ type SortOption = "newest" | "oldest" | "nameAsc" | "nameDesc" | "mostUsed"
 
 export default function FavoritesPage() {
   const { t, language } = useLanguage()
+  const currentLanguage = language || 'en'
   const [activeTab, setActiveTab] = useState<"prompts" | "templates">("prompts")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")

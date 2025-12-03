@@ -104,6 +104,9 @@ export default function BillingPage() {
   const [currentPlan] = useState("pro")
   const [showChangePlanModal, setShowChangePlanModal] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
+  
+  // 确保 language 有默认值
+  const currentLanguage = language || 'en'
 
   const features = [
     { icon: Zap, label: t.dashboard.billing.features.unlimited },
@@ -166,12 +169,12 @@ export default function BillingPage() {
                   >
                     <Sparkles className="w-5 h-5 text-accent" />
                   </motion.div>
-                  <h3 className="text-lg font-semibold text-foreground">{planNames[language].pro}</h3>
+                  <h3 className="text-lg font-semibold text-foreground">{planNames[currentLanguage].pro}</h3>
                   <span className="px-2 py-0.5 text-xs rounded-full bg-accent/20 text-accent border border-accent/30">
                     {t.dashboard.billing.changePlanModal.current}
                   </span>
                 </div>
-                <p className="text-sm text-foreground-secondary mb-4">{planDescriptions[language].pro}</p>
+                <p className="text-sm text-foreground-secondary mb-4">{planDescriptions[currentLanguage].pro}</p>
                 <p className="text-sm text-foreground-secondary">
                   {t.dashboard.billing.nextBilling}:{" "}
                   <span className="text-foreground font-medium">January 1, 2025</span>
@@ -313,7 +316,7 @@ export default function BillingPage() {
                         invoice.status === "failed" && "bg-error/20 text-error",
                       )}
                     >
-                      {statusLabels[language][invoice.status as keyof typeof statusLabels.en]}
+                      {statusLabels[currentLanguage][invoice.status as keyof typeof statusLabels.en]}
                     </span>
                     <motion.button
                       className="p-2 rounded-lg hover:bg-surface-hover transition-colors"
@@ -388,7 +391,7 @@ export default function BillingPage() {
                       </span>
                     )}
                     <h3 className="text-lg font-semibold text-foreground mb-1">
-                      {planNames[language][plan.id as keyof typeof planNames.en]}
+                      {planNames[currentLanguage][plan.id as keyof typeof planNames.en]}
                     </h3>
                     <p className="text-2xl font-bold text-foreground mb-1">
                       ${plan.price}
@@ -397,7 +400,7 @@ export default function BillingPage() {
                       </span>
                     </p>
                     <p className="text-xs text-foreground-muted mb-4">
-                      {planDescriptions[language][plan.id as keyof typeof planDescriptions.en]}
+                      {planDescriptions[currentLanguage][plan.id as keyof typeof planDescriptions.en]}
                     </p>
                     <ul className="space-y-2 mb-4">
                       {(language === "zh" ? plan.featuresZh : plan.features).map((feature, i) => (
