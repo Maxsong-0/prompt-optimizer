@@ -354,7 +354,7 @@ export default function TeamSpacePage() {
                     <p className="text-xs text-foreground-secondary">
                       {item === "Team Name" && "My Awesome Team"}
                       {item === "Billing" && "Pro Plan · 4 members"}
-                      {item === "Invite Link" && "promptcraft.io/invite/abc123"}
+                      {item === "Invite Link" && "promto.org/invite/abc123"}
                     </p>
                   </motion.div>
                 ))}

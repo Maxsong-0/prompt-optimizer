@@ -28,7 +28,7 @@ const mockTemplates: Template[] = [
     category: "Writing",
     tags: ["Blog", "SEO", "Content"],
     usageCount: 2340,
-    author: "PromptCraft Team",
+    author: "Promto Team",
     rating: 4.8,
     content: `You are an expert content writer specializing in creating engaging, SEO-optimized blog posts.
 
@@ -53,7 +53,7 @@ Word count: [WORD_COUNT]`,
     category: "Coding",
     tags: ["Review", "Best Practices"],
     usageCount: 1890,
-    author: "PromptCraft Team",
+    author: "Promto Team",
     rating: 4.9,
     content: `Act as a senior software engineer conducting a thorough code review.
 
@@ -79,7 +79,7 @@ Code to review:
     category: "Business",
     tags: ["Email", "Communication"],
     usageCount: 3210,
-    author: "PromptCraft Team",
+    author: "Promto Team",
     rating: 4.7,
     content: `You are a professional communication specialist. Write an email with the following details:
 
@@ -148,7 +148,7 @@ Write a description that:
     category: "Coding",
     tags: ["Docs", "Technical"],
     usageCount: 890,
-    author: "PromptCraft Team",
+    author: "Promto Team",
     rating: 4.5,
     content: `Write technical documentation for the following:
 

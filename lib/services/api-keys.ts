@@ -52,7 +52,7 @@ const SALT_LENGTH = 32
 function getEncryptionKey(): Buffer {
   const secret = process.env.API_KEY_ENCRYPTION_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || 'default-secret-key-change-in-production'
   // 使用 scrypt 派生 32 字节密钥
-  return scryptSync(secret, 'prompt-optimizer-salt', 32)
+  return scryptSync(secret, 'promto-salt', 32)
 }
 
 /**

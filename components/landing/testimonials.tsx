@@ -14,7 +14,7 @@ export function TestimonialsSection() {
       avatar: "SC",
       content:
         t.testimonials.items?.[0]?.content ||
-        "PromptCraft has transformed how I create content. My ChatGPT outputs are 10x better now!",
+        "Promto has transformed how I create content. My ChatGPT outputs are 10x better now!",
     },
     {
       name: t.testimonials.items?.[1]?.name || "Marcus Johnson",

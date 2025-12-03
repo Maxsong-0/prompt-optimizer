@@ -1,8 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
-import { Menu, X, Moon, Sun, Sparkles } from "lucide-react"
+import Image from "next/image"
+import { useState, useEffect } from "react"
+import { Menu, X, Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
 import { GradientButton } from "@/components/ui/gradient-button"
 import { LanguageSwitcher } from "@/components/ui/language-switcher"
@@ -11,8 +12,14 @@ import { motion, AnimatePresence } from "framer-motion"
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const { theme, setTheme } = useTheme()
   const { t } = useLanguage()
+
+  // 避免 hydration 错误：只在客户端挂载后渲染主题相关内容
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const navLinks = [
     { href: "#features", label: t.nav.features },
@@ -33,12 +40,12 @@ export function Navbar() {
           {/* Logo with hover animation */}
           <Link href="/" className="flex items-center gap-2">
             <motion.div
-              className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center"
+              className="w-8 h-8 rounded-lg overflow-hidden"
               whileHover={{ scale: 1.1, rotate: 5 }}
               whileTap={{ scale: 0.95 }}
               transition={{ type: "spring", stiffness: 400, damping: 15 }}
             >
-              <Sparkles className="w-5 h-5 text-white" />
+              <Image src="/apple-icon.png" alt="Promto Logo" width={32} height={32} className="w-full h-full object-cover" />
             </motion.div>
             <motion.span
               className="text-lg font-bold text-foreground"
@@ -49,7 +56,7 @@ export function Navbar() {
                 color: "transparent",
               }}
             >
-              PromptCraft
+              Promto
             </motion.span>
           </Link>
 
@@ -86,29 +93,34 @@ export function Navbar() {
               whileTap={{ scale: 0.9, rotate: 180 }}
               transition={{ type: "spring", stiffness: 400, damping: 15 }}
             >
-              <AnimatePresence mode="wait">
-                {theme === "dark" ? (
-                  <motion.div
-                    key="sun"
-                    initial={{ rotate: -90, opacity: 0 }}
-                    animate={{ rotate: 0, opacity: 1 }}
-                    exit={{ rotate: 90, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <Sun className="w-5 h-5 text-foreground-secondary" />
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="moon"
-                    initial={{ rotate: 90, opacity: 0 }}
-                    animate={{ rotate: 0, opacity: 1 }}
-                    exit={{ rotate: -90, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <Moon className="w-5 h-5 text-foreground-secondary" />
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {/* 只在客户端挂载后渲染，避免 hydration 错误 */}
+              {mounted ? (
+                <AnimatePresence mode="wait" initial={false}>
+                  {theme === "dark" ? (
+                    <motion.div
+                      key="sun"
+                      initial={{ rotate: -90, opacity: 0 }}
+                      animate={{ rotate: 0, opacity: 1 }}
+                      exit={{ rotate: 90, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <Sun className="w-5 h-5 text-foreground-secondary" />
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="moon"
+                      initial={{ rotate: 90, opacity: 0 }}
+                      animate={{ rotate: 0, opacity: 1 }}
+                      exit={{ rotate: -90, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <Moon className="w-5 h-5 text-foreground-secondary" />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              ) : (
+                <div className="w-5 h-5" /> 
+              )}
             </motion.button>
             <LanguageSwitcher />
             <Link href="/login">

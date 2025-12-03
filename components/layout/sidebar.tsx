@@ -1,9 +1,9 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import {
-  Sparkles,
   Beaker,
   History,
   LayoutTemplate,
@@ -123,11 +123,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
         <Link href="/" className="flex items-center gap-2 overflow-hidden">
           <motion.div
-            className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center shrink-0"
+            className="w-8 h-8 rounded-lg overflow-hidden shrink-0"
             whileHover={{ rotate: 15, scale: 1.05 }}
             transition={{ type: "spring", stiffness: 400, damping: 20 }}
           >
-            <Sparkles className="w-5 h-5 text-white" />
+            <Image src="/apple-icon.png" alt="Promto Logo" width={32} height={32} className="w-full h-full object-cover" />
           </motion.div>
           <AnimatePresence mode="wait">
             {!collapsed && (
@@ -138,7 +138,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 transition={{ duration: 0.2 }}
                 className="text-lg font-bold text-sidebar-foreground whitespace-nowrap"
               >
-                PromptCraft
+                Promto
               </motion.span>
             )}
           </AnimatePresence>

@@ -13,7 +13,7 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "PromptCraft - AI Prompt Optimization",
+  title: "Promto - AI Prompt Optimization",
   description:
     "Write better AI prompts for ChatGPT, Claude, Midjourney and more. Optimize, compare, and manage your prompts with ease.",
   keywords: ["AI", "prompt", "optimization", "ChatGPT", "Claude", "Midjourney", "prompt engineering"],

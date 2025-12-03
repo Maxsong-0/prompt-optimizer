@@ -1,7 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { Sparkles, Twitter, Github, Linkedin } from "lucide-react"
+import Image from "next/image"
+import { Twitter, Github, Linkedin } from "lucide-react"
 import { useLanguage } from "@/lib/i18n/language-context"
 
 export function Footer() {
@@ -35,10 +36,10 @@ export function Footer() {
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-white" />
+              <div className="w-8 h-8 rounded-lg overflow-hidden">
+                <Image src="/apple-icon.png" alt="Promto Logo" width={32} height={32} className="w-full h-full object-cover" />
               </div>
-              <span className="text-lg font-bold text-foreground">PromptCraft</span>
+              <span className="text-lg font-bold text-foreground">Promto</span>
             </Link>
             <p className="text-sm text-foreground-secondary mb-4">{t.footer.description}</p>
             <div className="flex items-center gap-3">

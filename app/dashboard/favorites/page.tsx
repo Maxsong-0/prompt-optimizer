@@ -40,7 +40,7 @@ const mockFavoritePrompts = [
     savedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
     usageCount: 23,
     lastUsed: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-    createdBy: "PromptCraft",
+    createdBy: "Promto",
   },
   {
     id: "2",
@@ -64,7 +64,7 @@ const mockFavoritePrompts = [
     savedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
     usageCount: 12,
     lastUsed: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-    createdBy: "PromptCraft",
+    createdBy: "Promto",
   },
   {
     id: "4",
@@ -88,7 +88,7 @@ const mockFavoritePrompts = [
     savedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
     usageCount: 34,
     lastUsed: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-    createdBy: "PromptCraft",
+    createdBy: "Promto",
   },
 ]
 
@@ -105,7 +105,7 @@ const mockFavoriteTemplates = [
     savedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
     usageCount: 89,
     lastUsed: new Date(Date.now() - 4 * 60 * 60 * 1000),
-    createdBy: "PromptCraft",
+    createdBy: "Promto",
   },
   {
     id: "2",
@@ -132,7 +132,7 @@ const mockFavoriteTemplates = [
     savedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
     usageCount: 42,
     lastUsed: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-    createdBy: "PromptCraft",
+    createdBy: "Promto",
   },
   {
     id: "4",

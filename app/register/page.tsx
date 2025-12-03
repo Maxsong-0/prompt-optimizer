@@ -5,7 +5,8 @@ import type React from "react"
 import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Sparkles, Mail, Lock, Eye, EyeOff, User, ArrowLeft, Check } from "lucide-react"
+import Image from "next/image"
+import { Mail, Lock, Eye, EyeOff, User, ArrowLeft, Check } from "lucide-react"
 import { GradientButton } from "@/components/ui/gradient-button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -97,11 +98,11 @@ export default function RegisterPage() {
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           <Link href="/" className="flex items-center gap-2">
             <motion.div
-              className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center"
+              className="w-10 h-10 rounded-xl overflow-hidden"
               whileHover={{ scale: 1.1, rotate: 5 }}
               whileTap={{ scale: 0.95 }}
             >
-              <Sparkles className="w-6 h-6 text-white" />
+              <Image src="/apple-icon.png" alt="Promto Logo" width={40} height={40} className="w-full h-full object-cover" />
             </motion.div>
             <motion.span
               className="text-2xl font-bold text-foreground"
@@ -109,7 +110,7 @@ export default function RegisterPage() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3 }}
             >
-              PromptCraft
+              Promto
             </motion.span>
           </Link>
 
@@ -186,12 +187,12 @@ export default function RegisterPage() {
             transition={{ delay: 0.2 }}
           >
             <motion.div
-              className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center"
+              className="w-8 h-8 rounded-lg overflow-hidden"
               whileHover={{ scale: 1.1, rotate: 5 }}
             >
-              <Sparkles className="w-5 h-5 text-white" />
+              <Image src="/apple-icon.png" alt="Promto Logo" width={32} height={32} className="w-full h-full object-cover" />
             </motion.div>
-            <span className="text-xl font-bold text-foreground">PromptCraft</span>
+            <span className="text-xl font-bold text-foreground">Promto</span>
           </motion.div>
 
           <FormItem index={0} className="mb-8">

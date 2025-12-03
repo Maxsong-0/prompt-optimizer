@@ -3,7 +3,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Updated theme for PromptCraft - deep dark background with electric blue/cyan gradient accents */
+/* Updated theme for Promto - deep dark background with electric blue/cyan gradient accents */
 :root {
   --background: #ffffff;
   --foreground: #0f172a;
@@ -39,7 +39,7 @@
   --sidebar-border: #e2e8f0;
   --sidebar-ring: #4f46e5;
 
-  /* Custom PromptCraft tokens */
+  /* Custom Promto tokens */
   --surface: #f1f5f9;
   --surface-elevated: #e2e8f0;
   --surface-hover: #cbd5e1;

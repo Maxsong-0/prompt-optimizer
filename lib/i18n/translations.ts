@@ -28,7 +28,7 @@ export const translations = {
     },
     // Features
     features: {
-      title: "What PromptCraft can do for you",
+      title: "What Promto can do for you",
       subtitle: "Powerful tools to help you craft the perfect prompts for any AI model",
       items: {
         optimization: {
@@ -108,7 +108,7 @@ export const translations = {
         {
           name: "Sarah Chen",
           role: "Content Creator",
-          content: "PromptCraft has transformed how I create content. My ChatGPT outputs are 10x better now!",
+          content: "Promto has transformed how I create content. My ChatGPT outputs are 10x better now!",
         },
         {
           name: "Marcus Johnson",
@@ -130,7 +130,7 @@ export const translations = {
         name: "Free",
         price: "$0",
         period: "forever",
-        description: "Perfect for trying out PromptCraft",
+        description: "Perfect for trying out Promto",
         features: ["10 optimizations per day", "Basic templates", "History (7 days)", "Community support"],
         cta: "Get Started",
       },
@@ -172,7 +172,7 @@ export const translations = {
       product: "Product",
       resources: "Resources",
       company: "Company",
-      copyright: "© 2025 PromptCraft. All rights reserved.",
+      copyright: "© 2025 Promto. All rights reserved.",
       privacy: "Privacy Policy",
       terms: "Terms of Service",
       links: {
@@ -546,11 +546,33 @@ export const translations = {
         connected: "Connected",
         connect: "Connect",
         disconnect: "Disconnect",
+        avatar: "Profile Photo",
+        avatarHint: "JPG, PNG or GIF. Max 2MB.",
+        uploadPhoto: "Upload Photo",
+        removePhoto: "Remove",
+        social: "Social Links",
+        twitter: "Twitter",
+        github: "GitHub",
+        linkedin: "LinkedIn",
         stats: {
+          title: "Statistics",
           totalOptimizations: "Total Optimizations",
           savedTemplates: "Saved Templates",
           favorites: "Favorites",
           thisMonth: "This Month",
+        },
+        connections: {
+          title: "Connected Accounts",
+          google: "Google",
+          github: "GitHub",
+          connect: "Connect",
+          disconnect: "Disconnect",
+        },
+        usage: {
+          title: "Usage",
+          optimizations: "Optimizations",
+          remaining: "Remaining",
+          resetDate: "Resets on",
         },
         activity: {
           title: "Recent Activity",
@@ -614,7 +636,7 @@ export const translations = {
     },
     // Features
     features: {
-      title: "PromptCraft 能为你做什么",
+      title: "Promto 能为你做什么",
       subtitle: "强大的工具，帮助你为任何 AI 模型打造完美的提示词",
       items: {
         optimization: {
@@ -693,7 +715,7 @@ export const translations = {
         {
           name: "陈思雨",
           role: "内容创作者",
-          content: "PromptCraft 彻底改变了我创作内容的方式。我的 ChatGPT 输出质量提升了 10 倍！",
+          content: "Promto 彻底改变了我创作内容的方式。我的 ChatGPT 输出质量提升了 10 倍！",
         },
         {
           name: "张明辉",
@@ -715,7 +737,7 @@ export const translations = {
         name: "免费版",
         price: "¥0",
         period: "永久免费",
-        description: "适合试用 PromptCraft",
+        description: "适合试用 Promto",
         features: ["每天 10 次优化", "基础模板", "历史记录（7 天）", "社区支持"],
         cta: "开始使用",
       },
@@ -743,7 +765,7 @@ export const translations = {
       product: "产品",
       resources: "资源",
       company: "公司",
-      copyright: "© 2025 PromptCraft. 保留所有权利。",
+      copyright: "© 2025 Promto. 保留所有权利。",
       privacy: "隐私政策",
       terms: "服务条款",
       links: {
@@ -1117,11 +1139,33 @@ export const translations = {
         connected: "已关联",
         connect: "关联",
         disconnect: "断开关联",
+        avatar: "头像",
+        avatarHint: "支持 JPG、PNG 或 GIF，最大 2MB",
+        uploadPhoto: "上传照片",
+        removePhoto: "移除",
+        social: "社交链接",
+        twitter: "Twitter",
+        github: "GitHub",
+        linkedin: "LinkedIn",
         stats: {
+          title: "统计数据",
           totalOptimizations: "总优化次数",
           savedTemplates: "保存的模板",
           favorites: "收藏数",
           thisMonth: "本月",
+        },
+        connections: {
+          title: "已关联账户",
+          google: "Google",
+          github: "GitHub",
+          connect: "关联",
+          disconnect: "断开",
+        },
+        usage: {
+          title: "使用情况",
+          optimizations: "优化次数",
+          remaining: "剩余",
+          resetDate: "重置日期",
         },
         activity: {
           title: "最近活动",

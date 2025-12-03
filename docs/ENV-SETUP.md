@@ -7,14 +7,17 @@
 ### Supabase 配置
 
 ```bash
-# 本地开发环境
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+# 公网访问环境（推荐，支持多设备和其他用户访问）
+NEXT_PUBLIC_SUPABASE_URL=https://api.promto.org
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
+
+# 或者：本地开发环境（仅本机访问）
+# NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
 ```
 
-运行 `supabase start` 后，可以从输出中获取这些值。
+运行 `supabase start` 后，可以从输出中获取 anon_key 和 service_role_key。
 
 ---
 
@@ -109,9 +112,9 @@ OpenRouter 是一个 AI 模型聚合平台，只需一个 API Key 即可访问 O
 1. 访问 https://github.com/settings/developers
 2. 点击 "New OAuth App"
 3. 填写信息：
-   - **Application name**: `Prompt Optimizer`
-   - **Homepage URL**: `http://localhost:3000`
-   - **Authorization callback URL**: `http://127.0.0.1:54321/auth/v1/callback`
+   - **Application name**: `Promto`
+   - **Homepage URL**: `https://www.promto.org`
+   - **Authorization callback URL**: `https://api.promto.org/auth/v1/callback`
 4. 点击 "Register application"
 5. 复制 **Client ID**
 6. 点击 "Generate a new client secret"，复制 **Client Secret**
@@ -126,8 +129,8 @@ OpenRouter 是一个 AI 模型聚合平台，只需一个 API Key 即可访问 O
    - 填写应用名称、用户支持邮箱、开发者联系信息
 5. 创建 OAuth 客户端：
    - **应用类型**: Web 应用
-   - **名称**: `Prompt Optimizer`
-   - **已授权的重定向 URI**: `http://127.0.0.1:54321/auth/v1/callback`
+   - **名称**: `Promto`
+   - **已授权的重定向 URI**: `https://api.promto.org/auth/v1/callback`
 6. 复制 **客户端 ID** 和 **客户端密钥**
 
 ### 第二步：配置环境变量
@@ -163,10 +166,12 @@ supabase start
 
 ### 回调 URL 总结
 
-| Provider | 本地开发回调 URL |
-|----------|-----------------|
-| GitHub   | `http://127.0.0.1:54321/auth/v1/callback` |
-| Google   | `http://127.0.0.1:54321/auth/v1/callback` |
+| Provider | 公网回调 URL (推荐) | 本地开发回调 URL |
+|----------|---------------------|-----------------|
+| GitHub   | `https://api.promto.org/auth/v1/callback` | `http://127.0.0.1:54321/auth/v1/callback` |
+| Google   | `https://api.promto.org/auth/v1/callback` | `http://127.0.0.1:54321/auth/v1/callback` |
+
+**重要**: 如果需要其他设备或用户使用 OAuth 登录，必须使用公网回调 URL。
 
 ### 常见问题
 
@@ -185,7 +190,11 @@ A: 尝试清除浏览器缓存，或使用隐身模式测试。
 
 ```bash
 # 应用URL（用于OAuth回调）
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+# 公网访问使用：
+NEXT_PUBLIC_APP_URL=https://www.promto.org
+
+# 或者本地开发使用：
+# NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 # Node环境
 NODE_ENV=development
@@ -226,11 +235,13 @@ Supabase environment variables are not set. Skipping auth middleware.
 
 ## 完整配置示例
 
+### 公网访问配置（推荐）
+
 ```bash
 # ============================================
-# Supabase
+# Supabase (公网)
 # ============================================
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_URL=https://api.promto.org
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
@@ -247,6 +258,24 @@ OPENROUTER_API_KEY=sk-or-v1-...
 # 安全
 # ============================================
 API_KEY_ENCRYPTION_SECRET=change-this-in-production
+
+# ============================================
+# 应用
+# ============================================
+NEXT_PUBLIC_APP_URL=https://www.promto.org
+NODE_ENV=development
+```
+
+### 本地开发配置（仅本机访问）
+
+```bash
+# ============================================
+# Supabase (本地)
+# ============================================
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
 
 # ============================================
 # 应用
