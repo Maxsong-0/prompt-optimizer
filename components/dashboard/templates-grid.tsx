@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import {
@@ -17,12 +17,14 @@ import {
   Check,
   X,
   FolderPlus,
+  Loader2,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { GradientButton } from "@/components/ui/gradient-button"
 import { TemplatePreviewModal } from "./template-preview-modal"
 import { useLanguage } from "@/lib/i18n/language-context"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 interface Template {
   id: string
@@ -36,157 +38,58 @@ interface Template {
   rating?: number
   isFavorite?: boolean
   isCustom?: boolean
+  user_id?: string | null
+  is_system?: boolean
 }
 
-const mockTemplates: Template[] = [
-  {
-    id: "1",
-    title: "Blog Post Writer",
-    description: "Generate engaging blog posts with proper structure and SEO optimization.",
-    category: "Writing",
-    tags: ["Blog", "SEO", "Content"],
-    usageCount: 2340,
-    author: "Promto Team",
-    rating: 4.8,
-    content: `You are an expert content writer specializing in creating engaging, SEO-optimized blog posts.
+// API响应类型
+interface TemplateFromAPI {
+  id: string
+  user_id: string | null
+  title: string
+  description: string | null
+  content: string
+  category: string
+  tags: string[] | null
+  is_public: boolean
+  is_system: boolean
+  usage_count: number
+  rating: number
+  rating_count: number
+  metadata: Record<string, any> | null
+  created_at: string
+  updated_at: string
+}
 
-Your task is to write a blog post on the topic: [TOPIC]
-
-Follow these guidelines:
-1. Start with an attention-grabbing headline
-2. Include a compelling introduction that hooks the reader
-3. Use clear subheadings to organize content (H2, H3)
-4. Include relevant keywords naturally throughout
-5. Add bullet points or numbered lists for easy scanning
-6. End with a strong call-to-action
-
-Target audience: [AUDIENCE]
-Tone: [TONE - professional/casual/friendly]
-Word count: [WORD_COUNT]`,
-  },
-  {
-    id: "2",
-    title: "Code Reviewer",
-    description: "Get detailed code reviews with suggestions for improvement.",
-    category: "Coding",
-    tags: ["Review", "Best Practices"],
-    usageCount: 1890,
-    author: "Promto Team",
-    rating: 4.9,
-    content: `Act as a senior software engineer conducting a thorough code review.
-
-Analyze the following code and provide:
-1. A summary of what the code does
-2. Potential bugs or issues
-3. Security vulnerabilities
-4. Performance improvements
-5. Code style and best practice suggestions
-6. Refactoring recommendations
-
-Be specific and provide code examples when suggesting improvements.
-
-Code to review:
-\`\`\`
-[PASTE YOUR CODE HERE]
-\`\`\``,
-  },
-  {
-    id: "3",
-    title: "Email Composer",
-    description: "Craft professional emails for any occasion.",
-    category: "Business",
-    tags: ["Email", "Communication"],
-    usageCount: 3210,
-    author: "Promto Team",
-    rating: 4.7,
-    content: `You are a professional communication specialist. Write an email with the following details:
-
-Purpose: [PURPOSE - follow-up/introduction/request/thank you]
-Recipient: [RECIPIENT - colleague/client/manager]
-Tone: [TONE - formal/semi-formal/friendly]
-Key points to include:
-- [POINT 1]
-- [POINT 2]
-- [POINT 3]
-
-The email should be concise, clear, and professional while maintaining a [TONE] tone.`,
-  },
-  {
-    id: "4",
-    title: "Midjourney Art Prompt",
-    description: "Create detailed prompts for stunning AI-generated artwork.",
-    category: "Image",
-    tags: ["Art", "Midjourney", "Creative"],
-    usageCount: 4560,
-    author: "Creative Studio",
-    rating: 4.9,
-    content: `Generate a detailed Midjourney prompt for the following concept:
-
-Subject: [SUBJECT]
-Style: [STYLE - photorealistic/anime/oil painting/digital art]
-Mood: [MOOD - dramatic/peaceful/mysterious/vibrant]
-Lighting: [LIGHTING - golden hour/studio/neon/natural]
-Camera angle: [ANGLE - close-up/wide shot/bird's eye]
-
-Format the output as:
-[subject description], [style], [mood], [lighting], [camera angle], [additional details] --ar [aspect ratio] --v 5.2`,
-  },
-  {
-    id: "5",
-    title: "Product Description",
-    description: "Write compelling product descriptions that convert.",
-    category: "Marketing",
-    tags: ["E-commerce", "Copywriting"],
-    usageCount: 1560,
-    author: "Marketing Pro",
-    rating: 4.6,
-    content: `Create a compelling product description for an e-commerce listing.
-
-Product: [PRODUCT NAME]
-Category: [CATEGORY]
-Key Features:
-- [FEATURE 1]
-- [FEATURE 2]
-- [FEATURE 3]
-
-Target audience: [TARGET AUDIENCE]
-Unique selling points: [USPs]
-
-Write a description that:
-1. Hooks the reader in the first sentence
-2. Highlights benefits over features
-3. Uses sensory language
-4. Includes a call-to-action
-5. Is optimized for SEO with natural keyword placement`,
-  },
-  {
-    id: "6",
-    title: "Technical Documentation",
-    description: "Create clear and comprehensive technical docs.",
-    category: "Coding",
-    tags: ["Docs", "Technical"],
-    usageCount: 890,
-    author: "Promto Team",
-    rating: 4.5,
-    content: `Write technical documentation for the following:
-
-Component/Feature: [NAME]
-Type: [API/Component/Function/System]
-Purpose: [BRIEF DESCRIPTION]
-
-Include:
-1. Overview/Introduction
-2. Prerequisites/Requirements
-3. Installation/Setup (if applicable)
-4. Usage examples with code snippets
-5. API reference/Props (if applicable)
-6. Common use cases
-7. Troubleshooting section
-8. Related resources
-
-Use clear, concise language suitable for developers of all skill levels.`,
-  },
-]
+// 将API响应转换为前端格式
+const transformTemplateFromAPI = (template: TemplateFromAPI): Template => {
+  // 分类映射
+  const categoryMap: Record<string, string> = {
+    writing: 'Writing',
+    coding: 'Coding',
+    marketing: 'Marketing',
+    business: 'Business',
+    image: 'Image',
+    education: 'Education',
+    custom: 'Custom',
+  }
+  
+  return {
+    id: template.id,
+    title: template.title,
+    description: template.description || '',
+    category: categoryMap[template.category] || 'Custom',
+    tags: template.tags || [],
+    usageCount: template.usage_count,
+    content: template.content,
+    author: template.metadata?.author || (template.is_system ? 'Promto Team' : 'You'),
+    rating: template.rating || undefined,
+    isFavorite: false, // TODO: 可以从收藏API获取
+    isCustom: !template.is_system && template.user_id !== null,
+    user_id: template.user_id,
+    is_system: template.is_system,
+  }
+}
 
 const DEFAULT_CATEGORIES = ["All", "Writing", "Coding", "Business", "Image", "Marketing", "Custom"]
 
@@ -197,8 +100,11 @@ export function TemplatesGrid() {
   const [selectedCategory, setSelectedCategory] = useState<string>("All")
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
   const [showPreviewModal, setShowPreviewModal] = useState(false)
-  const [templates, setTemplates] = useState<Template[]>(mockTemplates)
+  const [templates, setTemplates] = useState<Template[]>([])
   const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -212,12 +118,46 @@ export function TemplatesGrid() {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    category: "Custom",
+    category: "custom",
     tags: "",
     content: "",
   })
   const [newCategory, setNewCategory] = useState("")
   const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  // 获取模板列表
+  const fetchTemplates = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/templates?limit=100')
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success && result.data) {
+          // API 返回格式: { data: [...], total, limit, offset }
+          // 或者直接数组（兼容两种格式）
+          const templateData = Array.isArray(result.data) 
+            ? result.data 
+            : (result.data.data || [])
+          
+          if (Array.isArray(templateData)) {
+            const transformedTemplates = templateData.map(transformTemplateFromAPI)
+            setTemplates(transformedTemplates)
+          }
+        }
+      } else {
+        console.error('Failed to fetch templates')
+      }
+    } catch (error) {
+      console.error('Failed to fetch templates:', error)
+      toast.error(language === 'zh' ? '获取模板失败' : 'Failed to fetch templates')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [language])
+
+  useEffect(() => {
+    fetchTemplates()
+  }, [fetchTemplates])
 
   const filteredTemplates = templates.filter((template) => {
     const matchesSearch =
@@ -232,7 +172,14 @@ export function TemplatesGrid() {
     setShowPreviewModal(true)
   }
 
-  const handleUseTemplate = (template: Template) => {
+  const handleUseTemplate = async (template: Template) => {
+    // 记录使用
+    try {
+      await fetch(`/api/templates/${template.id}/use`, { method: 'POST' })
+    } catch (error) {
+      // 忽略错误，不影响使用
+    }
+    
     // 存储到sessionStorage然后跳转到Dashboard
     sessionStorage.setItem('promto-reoptimize', JSON.stringify({
       content: template.content,
@@ -247,54 +194,166 @@ export function TemplatesGrid() {
     setTimeout(() => setCopiedId(null), 2000)
   }
 
-  const toggleFavorite = (id: string) => {
+  const toggleFavorite = async (id: string) => {
+    const template = templates.find(t => t.id === id)
+    if (!template) return
+    
+    const newFavoriteState = !template.isFavorite
+    
+    // 乐观更新
     setTemplates(templates.map(t => 
-      t.id === id ? { ...t, isFavorite: !t.isFavorite } : t
+      t.id === id ? { ...t, isFavorite: newFavoriteState } : t
     ))
+    
+    try {
+      const response = await fetch(`/api/templates/${id}/favorite`, {
+        method: newFavoriteState ? 'POST' : 'DELETE',
+      })
+      
+      if (!response.ok) {
+        // 回滚
+        setTemplates(templates.map(t => 
+          t.id === id ? { ...t, isFavorite: !newFavoriteState } : t
+        ))
+        toast.error(language === 'zh' ? '操作失败' : 'Failed to update')
+      }
+    } catch (error) {
+      // 回滚
+      setTemplates(templates.map(t => 
+        t.id === id ? { ...t, isFavorite: !newFavoriteState } : t
+      ))
+      toast.error(language === 'zh' ? '操作失败' : 'Failed to update')
+    }
   }
 
   // Create Template
-  const handleCreate = () => {
-    const newTemplate: Template = {
-      id: Date.now().toString(),
-      title: formData.title,
-      description: formData.description,
-      category: formData.category,
-      tags: formData.tags.split(",").map(t => t.trim()).filter(Boolean),
-      content: formData.content,
-      usageCount: 0,
-      author: "You",
-      isCustom: true,
+  const handleCreate = async () => {
+    setIsSaving(true)
+    try {
+      // 分类映射（前端到后端）
+      const categoryMap: Record<string, string> = {
+        'Writing': 'writing',
+        'Coding': 'coding',
+        'Marketing': 'marketing',
+        'Business': 'business',
+        'Image': 'image',
+        'Education': 'education',
+        'Custom': 'custom',
+      }
+      
+      const response = await fetch('/api/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: formData.title,
+          description: formData.description,
+          content: formData.content,
+          category: categoryMap[formData.category] || 'custom',
+          tags: formData.tags.split(",").map(t => t.trim()).filter(Boolean),
+        }),
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create template')
+      }
+      
+      const result = await response.json()
+      if (result.success && result.data) {
+        const newTemplate = transformTemplateFromAPI(result.data)
+        setTemplates([newTemplate, ...templates])
+        toast.success(language === 'zh' ? '模板创建成功' : 'Template created successfully')
+      }
+      
+      setShowCreateModal(false)
+      resetForm()
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create template'
+      toast.error(errorMessage)
+    } finally {
+      setIsSaving(false)
     }
-    setTemplates([newTemplate, ...templates])
-    setShowCreateModal(false)
-    resetForm()
   }
 
   // Edit Template
-  const handleEdit = () => {
+  const handleEdit = async () => {
     if (!editingTemplate) return
-    setTemplates(templates.map(t => 
-      t.id === editingTemplate.id ? {
-        ...t,
-        title: formData.title,
-        description: formData.description,
-        category: formData.category,
-        tags: formData.tags.split(",").map(tag => tag.trim()).filter(Boolean),
-        content: formData.content,
-      } : t
-    ))
-    setShowEditModal(false)
-    setEditingTemplate(null)
-    resetForm()
+    
+    setIsSaving(true)
+    try {
+      // 分类映射（前端到后端）
+      const categoryMap: Record<string, string> = {
+        'Writing': 'writing',
+        'Coding': 'coding',
+        'Marketing': 'marketing',
+        'Business': 'business',
+        'Image': 'image',
+        'Education': 'education',
+        'Custom': 'custom',
+      }
+      
+      const response = await fetch(`/api/templates/${editingTemplate.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: formData.title,
+          description: formData.description,
+          content: formData.content,
+          category: categoryMap[formData.category] || 'custom',
+          tags: formData.tags.split(",").map(tag => tag.trim()).filter(Boolean),
+        }),
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to update template')
+      }
+      
+      const result = await response.json()
+      if (result.success && result.data) {
+        const updatedTemplate = transformTemplateFromAPI(result.data)
+        setTemplates(templates.map(t => 
+          t.id === editingTemplate.id ? updatedTemplate : t
+        ))
+        toast.success(language === 'zh' ? '模板更新成功' : 'Template updated successfully')
+      }
+      
+      setShowEditModal(false)
+      setEditingTemplate(null)
+      resetForm()
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update template'
+      toast.error(errorMessage)
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   // Delete Template
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!templateToDelete) return
-    setTemplates(templates.filter(t => t.id !== templateToDelete.id))
-    setShowDeleteConfirm(false)
-    setTemplateToDelete(null)
+    
+    setIsDeleting(true)
+    try {
+      const response = await fetch(`/api/templates/${templateToDelete.id}`, {
+        method: 'DELETE',
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to delete template')
+      }
+      
+      setTemplates(templates.filter(t => t.id !== templateToDelete.id))
+      toast.success(language === 'zh' ? '模板已删除' : 'Template deleted')
+      setShowDeleteConfirm(false)
+      setTemplateToDelete(null)
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete template'
+      toast.error(errorMessage)
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   // Open edit modal
@@ -427,6 +486,25 @@ export function TemplatesGrid() {
 
       {/* Templates Grid */}
       <div className="flex-1 overflow-y-auto p-6">
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center h-64">
+            <Loader2 className="w-8 h-8 animate-spin text-accent mb-4" />
+            <p className="text-sm text-foreground-muted">
+              {language === 'zh' ? '加载中...' : 'Loading...'}
+            </p>
+          </div>
+        ) : filteredTemplates.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64 text-center">
+            <p className="text-lg font-semibold text-foreground mb-2">
+              {language === 'zh' ? '暂无模板' : 'No templates found'}
+            </p>
+            <p className="text-sm text-foreground-secondary">
+              {searchQuery 
+                ? (language === 'zh' ? '尝试调整搜索条件' : 'Try adjusting your search')
+                : (language === 'zh' ? '创建您的第一个模板' : 'Create your first template')}
+            </p>
+          </div>
+        ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredTemplates.map((template) => (
             <motion.div
@@ -520,6 +598,7 @@ export function TemplatesGrid() {
             </motion.div>
           ))}
         </div>
+        )}
       </div>
 
       <TemplatePreviewModal
@@ -641,14 +720,20 @@ export function TemplatesGrid() {
                       setShowEditModal(false)
                       resetForm()
                     }}
+                    disabled={isSaving}
                   >
                     {language === 'zh' ? '取消' : 'Cancel'}
                   </GradientButton>
                   <GradientButton
                     onClick={showEditModal ? handleEdit : handleCreate}
-                    disabled={!formData.title || !formData.content}
+                    disabled={!formData.title || !formData.content || isSaving}
                   >
-                    {showEditModal 
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        {language === 'zh' ? '保存中...' : 'Saving...'}
+                      </>
+                    ) : showEditModal 
                       ? (language === 'zh' ? '保存更改' : 'Save Changes')
                       : (language === 'zh' ? '创建模板' : 'Create Template')}
                   </GradientButton>
@@ -687,15 +772,21 @@ export function TemplatesGrid() {
                   : `Are you sure you want to delete "${templateToDelete.title}"? This action cannot be undone.`}
               </p>
               <div className="flex justify-end gap-3">
-                <GradientButton variant="secondary" onClick={() => setShowDeleteConfirm(false)}>
+                <GradientButton variant="secondary" onClick={() => setShowDeleteConfirm(false)} disabled={isDeleting}>
                   {language === 'zh' ? '取消' : 'Cancel'}
                 </GradientButton>
                 <GradientButton
                   variant="ghost"
                   className="text-error hover:bg-error/10"
                   onClick={handleDelete}
+                  disabled={isDeleting}
                 >
-                  {language === 'zh' ? '删除' : 'Delete'}
+                  {isDeleting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      {language === 'zh' ? '删除中...' : 'Deleting...'}
+                    </>
+                  ) : (language === 'zh' ? '删除' : 'Delete')}
                 </GradientButton>
               </div>
             </motion.div>

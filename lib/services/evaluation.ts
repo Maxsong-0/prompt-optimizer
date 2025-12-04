@@ -5,6 +5,7 @@ import {
   EVALUATE_SYSTEM_PROMPT,
   getEvaluatePrompt,
   parseEvaluationResult,
+  DEFAULT_PROVIDER,
 } from '@/lib/ai'
 import type { AIProvider } from '@/lib/ai'
 
@@ -41,7 +42,7 @@ export class EvaluationService {
    * 评估提示词质量
    */
   static async evaluate(options: EvaluateOptions): Promise<EvaluationResult> {
-    const { content, promptId, provider = 'openai', saveResult = true } = options
+    const { content, promptId, provider = DEFAULT_PROVIDER, saveResult = true } = options
     const { model, config } = getEvalModel(provider)
 
     // 调用LLM进行评估
@@ -136,7 +137,7 @@ export class EvaluationService {
   static async compare(
     content1: string,
     content2: string,
-    provider: AIProvider = 'openai'
+    provider: AIProvider = DEFAULT_PROVIDER
   ): Promise<{
     prompt1: EvaluationResult
     prompt2: EvaluationResult

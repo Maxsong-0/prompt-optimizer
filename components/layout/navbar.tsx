@@ -3,11 +3,12 @@
 import Link from "next/link"
 import Image from "next/image"
 import { useState, useEffect } from "react"
-import { Menu, X, Moon, Sun } from "lucide-react"
+import { Menu, X, Moon, Sun, LayoutDashboard } from "lucide-react"
 import { useTheme } from "next-themes"
 import { GradientButton } from "@/components/ui/gradient-button"
 import { LanguageSwitcher } from "@/components/ui/language-switcher"
 import { useLanguage } from "@/lib/i18n/language-context"
+import { useUser } from "@/lib/supabase/hooks"
 import { motion, AnimatePresence } from "framer-motion"
 
 export function Navbar() {
@@ -15,6 +16,7 @@ export function Navbar() {
   const [mounted, setMounted] = useState(false)
   const { theme, setTheme } = useTheme()
   const { t } = useLanguage()
+  const { user, loading: userLoading } = useUser()
 
   // 避免 hydration 错误：只在客户端挂载后渲染主题相关内容
   useEffect(() => {
@@ -125,26 +127,47 @@ export function Navbar() {
               )}
             </motion.button>
             <LanguageSwitcher />
-            <Link href="/login">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <GradientButton variant="ghost" size="sm">
-                  {t.nav.signIn}
-                </GradientButton>
-              </motion.div>
-            </Link>
-            <Link href="/register">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="relative">
-                {/* Subtle glow effect */}
-                <motion.div
-                  className="absolute inset-0 rounded-full bg-gradient-to-r from-primary to-accent opacity-0 blur-lg"
-                  whileHover={{ opacity: 0.4 }}
-                  transition={{ duration: 0.3 }}
-                />
-                <GradientButton size="sm" className="relative z-10">
-                  {t.nav.getStarted}
-                </GradientButton>
-              </motion.div>
-            </Link>
+            {mounted && !userLoading && (
+              user ? (
+                // 已登录：显示 Go to Dashboard
+                <Link href="/dashboard">
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="relative">
+                    <motion.div
+                      className="absolute inset-0 rounded-full bg-gradient-to-r from-primary to-accent opacity-0 blur-lg"
+                      whileHover={{ opacity: 0.4 }}
+                      transition={{ duration: 0.3 }}
+                    />
+                    <GradientButton size="sm" className="relative z-10">
+                      <LayoutDashboard className="w-4 h-4 mr-2" />
+                      {t.nav.dashboard || "Dashboard"}
+                    </GradientButton>
+                  </motion.div>
+                </Link>
+              ) : (
+                // 未登录：显示 Sign in 和 Get Started
+                <>
+                  <Link href="/login">
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                      <GradientButton variant="ghost" size="sm">
+                        {t.nav.signIn}
+                      </GradientButton>
+                    </motion.div>
+                  </Link>
+                  <Link href="/register">
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="relative">
+                      <motion.div
+                        className="absolute inset-0 rounded-full bg-gradient-to-r from-primary to-accent opacity-0 blur-lg"
+                        whileHover={{ opacity: 0.4 }}
+                        transition={{ duration: 0.3 }}
+                      />
+                      <GradientButton size="sm" className="relative z-10">
+                        {t.nav.getStarted}
+                      </GradientButton>
+                    </motion.div>
+                  </Link>
+                </>
+              )
+            )}
           </div>
 
           {/* Mobile Menu Button with animation */}
@@ -226,16 +249,31 @@ export function Navbar() {
                     visible: { opacity: 1, y: 0 },
                   }}
                 >
-                  <Link href="/login" className="flex-1" onClick={() => setIsOpen(false)}>
-                    <GradientButton variant="secondary" size="sm" className="w-full">
-                      {t.nav.signIn}
-                    </GradientButton>
-                  </Link>
-                  <Link href="/register" className="flex-1" onClick={() => setIsOpen(false)}>
-                    <GradientButton size="sm" className="w-full">
-                      {t.nav.getStarted}
-                    </GradientButton>
-                  </Link>
+                  {mounted && !userLoading && (
+                    user ? (
+                      // 已登录：显示 Go to Dashboard
+                      <Link href="/dashboard" className="flex-1" onClick={() => setIsOpen(false)}>
+                        <GradientButton size="sm" className="w-full">
+                          <LayoutDashboard className="w-4 h-4 mr-2" />
+                          {t.nav.dashboard || "Dashboard"}
+                        </GradientButton>
+                      </Link>
+                    ) : (
+                      // 未登录：显示 Sign in 和 Get Started
+                      <>
+                        <Link href="/login" className="flex-1" onClick={() => setIsOpen(false)}>
+                          <GradientButton variant="secondary" size="sm" className="w-full">
+                            {t.nav.signIn}
+                          </GradientButton>
+                        </Link>
+                        <Link href="/register" className="flex-1" onClick={() => setIsOpen(false)}>
+                          <GradientButton size="sm" className="w-full">
+                            {t.nav.getStarted}
+                          </GradientButton>
+                        </Link>
+                      </>
+                    )
+                  )}
                 </motion.div>
               </motion.div>
             </motion.div>

@@ -48,7 +48,7 @@ export interface ModelOption {
 
 const DEFAULT_SETTINGS: ModelSettings = {
   provider: 'openrouter',
-  model: 'google/gemini-2.0-flash-exp:free',
+  model: 'google/gemini-3-pro-preview',
   temperature: 0.7,
   maxTokens: 4096,
   topP: 1,
@@ -76,8 +76,9 @@ const PROMTO_AI_MODELS: ModelOption[] = [
 
 // 内置模型列表（当API不可用时使用）
 const BUILTIN_MODELS: ModelOption[] = [
-  // OpenRouter
-  { id: 'google/gemini-2.0-flash-exp:free', name: 'Gemini 2.0 Flash (Free)', provider: 'openrouter', contextLength: 1000000, badges: ['Free', 'Recommended'] },
+  // OpenRouter - 默认免费试用模型
+  { id: 'google/gemini-3-pro-preview', name: 'Gemini 3 Pro Preview', provider: 'openrouter', contextLength: 1000000, badges: ['Free Trial', 'Recommended'] },
+  { id: 'google/gemini-2.0-flash-exp:free', name: 'Gemini 2.0 Flash (Free)', provider: 'openrouter', contextLength: 1000000, badges: ['Free'] },
   { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'openrouter', contextLength: 200000 },
   { id: 'openai/gpt-4o', name: 'GPT-4o', provider: 'openrouter', contextLength: 128000 },
   { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini', provider: 'openrouter', contextLength: 128000 },

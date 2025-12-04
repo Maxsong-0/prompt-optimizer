@@ -11,6 +11,10 @@ export type AIProvider = 'openai' | 'anthropic' | 'gemini' | 'openrouter'
 // 默认使用 OpenRouter
 export const DEFAULT_PROVIDER: AIProvider = 'openrouter'
 
+// 默认 OpenRouter API Key（供用户免费试用）
+// 注意：这个 key 可能需要定期更新
+export const DEFAULT_OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || ''
+
 export interface ModelConfig {
   provider: AIProvider
   model: string
@@ -28,7 +32,6 @@ export interface ModelConfig {
 export function createOpenAIClient(apiKey?: string) {
   return createOpenAI({
     apiKey: apiKey || process.env.OPENAI_API_KEY,
-    compatibility: 'strict',
   })
 }
 
@@ -53,12 +56,16 @@ export function createGeminiClient(apiKey?: string) {
 /**
  * 创建 OpenRouter 客户端
  * OpenRouter 使用 OpenAI 兼容的 API
+ * 如果没有提供 API Key，将使用环境变量中的 Key
  */
 export function createOpenRouterClient(apiKey?: string) {
+  const key = apiKey || process.env.OPENROUTER_API_KEY || DEFAULT_OPENROUTER_API_KEY
+  if (!key) {
+    throw new Error('OpenRouter API key not configured. Please set OPENROUTER_API_KEY environment variable.')
+  }
   return createOpenAI({
-    apiKey: apiKey || process.env.OPENROUTER_API_KEY,
+    apiKey: key,
     baseURL: 'https://openrouter.ai/api/v1',
-    compatibility: 'compatible',
   })
 }
 
@@ -82,7 +89,7 @@ export const openrouter = createOpenRouterClient()
 export const QUICK_MODEL_CONFIG: Record<AIProvider, ModelConfig> = {
   openrouter: {
     provider: 'openrouter',
-    model: 'google/gemini-2.0-flash-exp:free', // 免费快速模型
+    model: 'google/gemini-3-pro-preview', // 免费试用模型
     maxTokens: 4096,
     temperature: 0.7,
   },
@@ -113,7 +120,7 @@ export const QUICK_MODEL_CONFIG: Record<AIProvider, ModelConfig> = {
 export const DEEP_MODEL_CONFIG: Record<AIProvider, ModelConfig> = {
   openrouter: {
     provider: 'openrouter',
-    model: 'anthropic/claude-3.5-sonnet', // 通过 OpenRouter 使用 Claude
+    model: 'google/gemini-3-pro-preview', // 免费试用模型
     maxTokens: 8192,
     temperature: 0.5,
   },
@@ -143,7 +150,7 @@ export const DEEP_MODEL_CONFIG: Record<AIProvider, ModelConfig> = {
 export const EVAL_MODEL_CONFIG: Record<AIProvider, ModelConfig> = {
   openrouter: {
     provider: 'openrouter',
-    model: 'openai/gpt-4o', // 通过 OpenRouter 使用 GPT-4o
+    model: 'google/gemini-3-pro-preview', // 免费试用模型
     maxTokens: 2048,
     temperature: 0.3,
   },

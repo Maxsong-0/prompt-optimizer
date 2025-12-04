@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import {
@@ -23,11 +23,13 @@ import {
   MoreHorizontal,
   Tag,
   X,
+  Loader2,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { GradientButton } from "@/components/ui/gradient-button"
 import { useLanguage } from "@/lib/i18n/language-context"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 // =====================================================
 // 类型定义
@@ -52,133 +54,20 @@ interface TimelineGroup {
   items: HistoryItem[]
 }
 
-// =====================================================
-// Mock数据
-// =====================================================
-
-const mockHistory: HistoryItem[] = [
-  {
-    id: "1",
-    title: "Blog post about AI trends",
-    model: "GPT-4o",
-    tags: ["Writing", "Blog"],
-    createdAt: "2 hours ago",
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    preview: "Write a comprehensive blog post about emerging AI trends...",
-    originalContent: `Write a blog post about AI trends.
-
-Make it interesting and informative.
-Include some examples.`,
-    optimizedContent: `You are an expert technology journalist with 10+ years of experience covering AI developments.
-
-Your task is to write a comprehensive, engaging blog post about emerging AI trends that:
-- Captures the reader's attention from the first sentence
-- Provides actionable insights and real-world examples
-- Is optimized for search engines without sacrificing readability
-- Follows a clear structure with compelling headings
-
-Target Audience: Tech enthusiasts and business professionals
-Desired Length: 1500-2000 words
-Tone: Professional yet conversational
-
-Format your response with:
-1. An attention-grabbing headline
-2. A hook introduction (2-3 sentences)
-3. 3-4 main sections covering key AI trends
-4. Real-world examples and case studies
-5. A strong call-to-action conclusion`,
-    isFavorite: true,
-  },
-  {
-    id: "2",
-    title: "React component generator",
-    model: "Claude 3.5",
-    tags: ["Coding", "React"],
-    createdAt: "5 hours ago",
-    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
-    preview: "Generate a reusable React component that...",
-    originalContent: `Create a React button component.`,
-    optimizedContent: `Act as a senior React developer with expertise in TypeScript and modern React patterns.
-
-Create a reusable Button component with the following specifications:
-
-**Requirements:**
-- TypeScript with proper type definitions
-- Support for variants: primary, secondary, outline, ghost
-- Support for sizes: sm, md, lg
-- Loading state with spinner
-- Disabled state styling
-- Icon support (left and right positions)
-- Proper accessibility attributes (ARIA)
-- CSS-in-JS or Tailwind CSS styling
-
-**Include:**
-- Component file with all variants
-- Usage examples
-- PropTypes documentation`,
-  },
-  {
-    id: "3",
-    title: "Product description for website",
-    model: "GPT-4o Mini",
-    tags: ["Marketing", "E-commerce"],
-    createdAt: "Yesterday",
-    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
-    preview: "Create an engaging product description for...",
-    originalContent: `Write a product description for a wireless headphone.`,
-    optimizedContent: `You are a professional e-commerce copywriter specializing in consumer electronics.
-
-Create a compelling product description for premium wireless headphones that:
-
-**Product Details:**
-- Product: [Wireless Over-ear Headphones]
-- Key Features: Active Noise Cancellation, 30-hour battery, Hi-Fi sound
-
-**Guidelines:**
-1. Open with a benefit-focused headline
-2. Highlight 3-5 key features with customer benefits
-3. Use sensory language to describe the audio experience
-4. Include social proof placeholder
-5. End with a compelling CTA
-
-**Tone:** Premium, aspirational, yet accessible
-**Length:** 150-200 words
-**Format:** Include bullet points for features`,
-  },
-  {
-    id: "4",
-    title: "Email marketing template",
-    model: "Claude 3.5",
-    tags: ["Marketing", "Email"],
-    createdAt: "2 days ago",
-    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-    preview: "Create an email marketing template for product launch...",
-    originalContent: `Write an email for product launch.`,
-    optimizedContent: `Act as a senior email marketing specialist. Create a product launch email...`,
-  },
-  {
-    id: "5",
-    title: "Midjourney fantasy landscape",
-    model: "Midjourney",
-    tags: ["Image", "Art"],
-    createdAt: "1 week ago",
-    timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-    preview: "A mystical forest with bioluminescent plants...",
-    originalContent: `A fantasy forest image.`,
-    optimizedContent: `A mystical enchanted forest at twilight, bioluminescent plants casting ethereal blue and purple glow, ancient twisted trees with glowing runes carved into bark, magical fireflies dancing in the mist, a hidden pathway leading to a distant crystal tower, volumetric fog, cinematic lighting, fantasy art style, highly detailed, 8k resolution --ar 16:9 --v 5.2 --style raw`,
-  },
-  {
-    id: "6",
-    title: "API Documentation",
-    model: "GPT-4o",
-    tags: ["Coding", "Documentation"],
-    createdAt: "2 weeks ago",
-    timestamp: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
-    preview: "Generate comprehensive API documentation...",
-    originalContent: `Write API docs for a REST API.`,
-    optimizedContent: `Act as a technical writer specializing in API documentation. Create comprehensive, developer-friendly API documentation...`,
-  },
-]
+// API响应类型
+interface PromptFromAPI {
+  id: string
+  title: string | null
+  original_content: string
+  optimized_content: string | null
+  optimization_mode: string | null
+  model_used: string | null
+  score: number | null
+  is_favorite: boolean
+  tags: string[] | null
+  created_at: string
+  updated_at: string
+}
 
 // =====================================================
 // 工具函数
@@ -221,6 +110,43 @@ const groupByDate = (items: HistoryItem[], language: string): TimelineGroup[] =>
 // 组件
 // =====================================================
 
+// 将API响应转换为前端格式
+const transformPromptToHistoryItem = (prompt: PromptFromAPI): HistoryItem => {
+  const timestamp = new Date(prompt.created_at)
+  const now = new Date()
+  const diffMs = now.getTime() - timestamp.getTime()
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+  let createdAt: string
+  if (diffHours < 1) {
+    createdAt = 'Just now'
+  } else if (diffHours < 24) {
+    createdAt = `${diffHours} hours ago`
+  } else if (diffDays === 1) {
+    createdAt = 'Yesterday'
+  } else if (diffDays < 7) {
+    createdAt = `${diffDays} days ago`
+  } else if (diffDays < 30) {
+    createdAt = `${Math.floor(diffDays / 7)} weeks ago`
+  } else {
+    createdAt = timestamp.toLocaleDateString()
+  }
+
+  return {
+    id: prompt.id,
+    title: prompt.title || 'Untitled Prompt',
+    model: prompt.model_used || 'Unknown',
+    tags: prompt.tags || [],
+    createdAt,
+    timestamp,
+    preview: prompt.original_content.slice(0, 100) + (prompt.original_content.length > 100 ? '...' : ''),
+    originalContent: prompt.original_content,
+    optimizedContent: prompt.optimized_content || '',
+    isFavorite: prompt.is_favorite,
+  }
+}
+
 export function HistoryList() {
   const { t, language } = useLanguage()
   const router = useRouter()
@@ -228,11 +154,44 @@ export function HistoryList() {
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null)
   const [selectedModel, setSelectedModel] = useState<string | null>(null)
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
-  const [history, setHistory] = useState(mockHistory)
+  const [history, setHistory] = useState<HistoryItem[]>([])
   const [expandedItem, setExpandedItem] = useState<string | null>(null)
   const [showCompare, setShowCompare] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  // 获取历史记录
+  const fetchHistory = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/prompts?limit=100&page=1')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.data) {
+          // API 返回分页格式: { items: [...], total, page, limit, has_more }
+          const promptItems = data.data.items || data.data
+          if (Array.isArray(promptItems)) {
+            const items = promptItems.map(transformPromptToHistoryItem)
+            setHistory(items)
+          }
+        }
+      } else {
+        const errorData = await response.json()
+        console.error('Failed to fetch history:', errorData)
+      }
+    } catch (error) {
+      console.error('Failed to fetch history:', error)
+      toast.error(language === 'zh' ? '获取历史记录失败' : 'Failed to fetch history')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [language])
+
+  useEffect(() => {
+    fetchHistory()
+  }, [fetchHistory])
 
   const filters = [
     t.dashboard.history.all,
@@ -277,13 +236,65 @@ export function HistoryList() {
     setSelectedItems(new Set())
   }
 
-  const deleteSelected = () => {
-    setHistory(history.filter((item) => !selectedItems.has(item.id)))
-    setSelectedItems(new Set())
+  const deleteSelected = async () => {
+    if (selectedItems.size === 0) return
+    
+    setIsDeleting(true)
+    const itemsToDelete = Array.from(selectedItems)
+    let successCount = 0
+    
+    try {
+      for (const id of itemsToDelete) {
+        const response = await fetch(`/api/prompts/${id}`, { method: 'DELETE' })
+        if (response.ok) {
+          successCount++
+        }
+      }
+      
+      // 更新本地状态
+      setHistory(history.filter((item) => !selectedItems.has(item.id)))
+      setSelectedItems(new Set())
+      
+      toast.success(
+        language === 'zh' 
+          ? `已删除 ${successCount} 条记录` 
+          : `Deleted ${successCount} items`
+      )
+    } catch (error) {
+      console.error('Failed to delete items:', error)
+      toast.error(language === 'zh' ? '删除失败' : 'Failed to delete')
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
-  const toggleFavorite = (id: string) => {
-    setHistory(history.map((item) => (item.id === id ? { ...item, isFavorite: !item.isFavorite } : item)))
+  const toggleFavorite = async (id: string) => {
+    const item = history.find(h => h.id === id)
+    if (!item) return
+    
+    const newFavoriteState = !item.isFavorite
+    
+    // 乐观更新UI
+    setHistory(history.map((h) => (h.id === id ? { ...h, isFavorite: newFavoriteState } : h)))
+    
+    try {
+      const response = await fetch(`/api/prompts/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_favorite: newFavoriteState }),
+      })
+      
+      if (!response.ok) {
+        // 回滚
+        setHistory(history.map((h) => (h.id === id ? { ...h, isFavorite: !newFavoriteState } : h)))
+        toast.error(language === 'zh' ? '操作失败' : 'Failed to update')
+      }
+    } catch (error) {
+      // 回滚
+      setHistory(history.map((h) => (h.id === id ? { ...h, isFavorite: !newFavoriteState } : h)))
+      console.error('Failed to toggle favorite:', error)
+      toast.error(language === 'zh' ? '操作失败' : 'Failed to update')
+    }
   }
 
   const exportSelected = () => {
@@ -463,8 +474,13 @@ export function HistoryList() {
                 size="sm"
                 onClick={deleteSelected}
                 className="text-error hover:bg-error/10"
+                disabled={isDeleting}
               >
-                <Trash2 className="w-4 h-4 mr-1" />
+                {isDeleting ? (
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4 mr-1" />
+                )}
                 {language === 'zh' ? '删除' : 'Delete'}
               </GradientButton>
             </div>
@@ -498,7 +514,14 @@ export function HistoryList() {
 
       {/* Timeline View */}
       <div className="flex-1 overflow-y-auto">
-        {filteredHistory.length === 0 ? (
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center h-full p-8">
+            <Loader2 className="w-8 h-8 animate-spin text-accent mb-4" />
+            <p className="text-sm text-foreground-muted">
+              {language === 'zh' ? '加载中...' : 'Loading...'}
+            </p>
+          </div>
+        ) : filteredHistory.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full p-8 text-center">
             <div className="w-16 h-16 rounded-full bg-surface flex items-center justify-center mb-4">
               <Clock className="w-8 h-8 text-foreground-muted" />

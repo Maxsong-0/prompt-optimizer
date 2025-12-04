@@ -13,6 +13,7 @@ export {
   QUICK_MODEL_CONFIG,
   DEEP_MODEL_CONFIG,
   EVAL_MODEL_CONFIG,
+  DEFAULT_PROVIDER,
 } from './providers'
 
 export type { AIProvider, ModelConfig } from './providers'

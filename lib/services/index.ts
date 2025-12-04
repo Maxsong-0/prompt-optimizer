@@ -16,3 +16,13 @@ export type { AIProviderType, UserApiKey, ApiKeyInfo, SaveApiKeyInput } from './
 export { ModelsService } from './models'
 export type { AIModel, ModelListResponse } from './models'
 
+export { TemplateService } from './template'
+export type { 
+  Template, 
+  TemplateCategory, 
+  CreateTemplateInput, 
+  UpdateTemplateInput, 
+  TemplateListOptions, 
+  PaginatedTemplates 
+} from './template'
+

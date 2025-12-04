@@ -8,6 +8,7 @@ import {
 } from '@/lib/api/utils'
 import { ModelsService } from '@/lib/services/models'
 import { ApiKeyService } from '@/lib/services/api-keys'
+import { DEFAULT_OPENROUTER_API_KEY } from '@/lib/ai/providers'
 import type { AIProviderType } from '@/lib/services/api-keys'
 
 /**
@@ -45,9 +46,9 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     }
   }
 
-  // 如果用户没有配置任何 key，也尝试从环境变量获取
-  if (!apiKeys.openrouter && process.env.OPENROUTER_API_KEY) {
-    apiKeys.openrouter = process.env.OPENROUTER_API_KEY
+  // 如果用户没有配置任何 key，使用默认或环境变量
+  if (!apiKeys.openrouter) {
+    apiKeys.openrouter = process.env.OPENROUTER_API_KEY || DEFAULT_OPENROUTER_API_KEY
   }
   if (!apiKeys.openai && process.env.OPENAI_API_KEY) {
     apiKeys.openai = process.env.OPENAI_API_KEY

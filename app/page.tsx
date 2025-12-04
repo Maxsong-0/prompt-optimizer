@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Navbar } from "@/components/layout/navbar"
 import { Footer } from "@/components/layout/footer"
@@ -19,20 +19,29 @@ const LightPillar = dynamic(() => import("@/components/ui/light-pillar"), {
   loading: () => null
 })
 
-export default function LandingPage() {
+// OAuth 回调处理组件（需要 Suspense 包裹）
+function OAuthCallbackHandler() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  // 处理 OAuth 回调 code（如果 Supabase 回调到根路径）
   useEffect(() => {
     const code = searchParams.get('code')
     if (code) {
-      // 重定向到正确的 callback 处理路由
       router.replace(`/api/auth/callback?code=${code}&next=/dashboard`)
     }
   }, [searchParams, router])
+
+  return null
+}
+
+export default function LandingPage() {
   return (
     <div className="min-h-screen relative">
+      {/* OAuth 回调处理 */}
+      <Suspense fallback={null}>
+        <OAuthCallbackHandler />
+      </Suspense>
+      
       {/* LightPillar 动态背景 - 固定背景，光柱延伸更长 */}
       <div className="fixed inset-0 -z-10 backdrop-blur-[2px]">
         <LightPillar

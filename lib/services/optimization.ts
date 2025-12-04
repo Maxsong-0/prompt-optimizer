@@ -13,6 +13,7 @@ import {
   getRefinePrompt,
   parseXMLContent,
   shouldContinueIteration,
+  DEFAULT_PROVIDER,
 } from '@/lib/ai'
 import type { AIProvider } from '@/lib/ai'
 import { UserService } from './user'
@@ -69,7 +70,7 @@ export class OptimizationService {
    * 快速优化 - 返回流式响应
    */
   static async quickOptimizeStream(options: QuickOptimizeOptions) {
-    const { content, provider = 'openai', userId } = options
+    const { content, provider = DEFAULT_PROVIDER, userId } = options
     const { model, config } = getQuickModel(provider)
 
     // 检查配额（如果提供了userId）
@@ -101,7 +102,7 @@ export class OptimizationService {
     provider: AIProvider
     tokensUsed?: number
   }> {
-    const { content, provider = 'openai', userId, saveResult, title } = options
+    const { content, provider = DEFAULT_PROVIDER, userId, saveResult, title } = options
     const { model, config } = getQuickModel(provider)
 
     // 检查配额
@@ -157,7 +158,7 @@ export class OptimizationService {
   static async createDeepOptimizeJob(options: DeepOptimizeOptions): Promise<string> {
     const {
       content,
-      provider = 'openai',
+      provider = DEFAULT_PROVIDER,
       userId,
       maxIterations = 3,
       title,
@@ -214,7 +215,7 @@ export class OptimizationService {
     jobId: string,
     options: DeepOptimizeOptions
   ): Promise<void> {
-    const { content, provider = 'openai', userId, maxIterations = 3, title } = options
+    const { content, provider = DEFAULT_PROVIDER, userId, maxIterations = 3, title } = options
     const supabase = await createClient()
 
     const updateJob = async (updates: Record<string, unknown>) => {

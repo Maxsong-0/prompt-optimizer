@@ -57,13 +57,26 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       return successResponse(result)
     }
   } catch (error) {
+    console.error('Optimization error:', error)
+    
     if (error instanceof Error) {
       if (error.message.includes('配额') || error.message.includes('次数')) {
         return errorResponse(error.message, 429)
       }
-      if (error.message.includes('API key')) {
-        return errorResponse('AI服务配置错误，请联系管理员', 500)
+      // API key 相关错误
+      if (error.message.includes('API key') || 
+          error.message.includes('apiKey') || 
+          error.message.includes('authentication') ||
+          error.message.includes('unauthorized') ||
+          error.message.includes('401')) {
+        return errorResponse('AI服务未配置。请在设置中配置您的 API Key，或联系管理员配置默认服务。', 500)
       }
+      // 模型不存在
+      if (error.message.includes('model') && error.message.includes('not found')) {
+        return errorResponse('AI模型暂时不可用，请稍后再试', 503)
+      }
+      // 其他错误
+      return errorResponse(`优化失败: ${error.message}`, 500)
     }
     throw error
   }

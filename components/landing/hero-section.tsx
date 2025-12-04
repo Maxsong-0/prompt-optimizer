@@ -1,24 +1,31 @@
 "use client"
 
-import { ArrowRight, Sparkles, Zap, Check } from "lucide-react"
+import { ArrowRight, Sparkles, Zap, Check, LayoutDashboard } from "lucide-react"
 import { GradientButton } from "@/components/ui/gradient-button"
 import { PromptCard } from "@/components/ui/prompt-card"
 import { useLanguage } from "@/lib/i18n/language-context"
+import { useUser } from "@/lib/supabase/hooks"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { FadeIn, StaggerContainer, StaggerItem } from "@/components/ui/motion"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 export function HeroSection() {
   const { t } = useLanguage()
   const router = useRouter()
+  const { user, loading: userLoading } = useUser()
   const [isNavigating, setIsNavigating] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleGetStarted = () => {
     setIsNavigating(true)
     setTimeout(() => {
-      router.push("/register")
+      router.push(user ? "/dashboard" : "/register")
     }, 300)
   }
 
@@ -196,7 +203,14 @@ export function HeroSection() {
                         </motion.span>
                         Loading...
                       </motion.span>
+                    ) : mounted && !userLoading && user ? (
+                      // 已登录：显示 Go to Dashboard
+                      <>
+                        <LayoutDashboard className="w-5 h-5 mr-2" />
+                        {t.nav.dashboard || "Go to Dashboard"}
+                      </>
                     ) : (
+                      // 未登录：显示 Start Optimizing
                       <>
                         {t.hero.cta}
                         <motion.span

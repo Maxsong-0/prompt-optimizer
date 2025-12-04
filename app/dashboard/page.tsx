@@ -10,48 +10,15 @@ import { VersionHistoryPanel } from "@/components/dashboard/version-history-pane
 import { SaveTemplateModal } from "@/components/dashboard/save-template-modal"
 import { ExportModal } from "@/components/dashboard/export-modal"
 import { KeyboardShortcutsModal } from "@/components/dashboard/keyboard-shortcuts-modal"
+import { toast } from "sonner"
+import { useModelConfig } from "@/lib/contexts/model-config-context"
 
-const mockResults = [
-  {
-    id: "v1",
-    title: "Enhanced Version",
-    content: `You are an expert content strategist with 10+ years of experience in digital marketing and SEO optimization.
-
-Your task is to write a comprehensive, engaging blog post that:
-- Captures the reader's attention from the first sentence
-- Provides actionable insights and real-world examples
-- Is optimized for search engines without sacrificing readability
-- Follows a clear structure with compelling headings
-
-Topic: [Your topic here]
-Target Audience: [Define your audience]
-Desired Length: 1500-2000 words
-Tone: Professional yet conversational
-
-Format your response with:
-1. An attention-grabbing headline
-2. A hook introduction (2-3 sentences)
-3. 3-4 main sections with subheadings
-4. Bullet points for key takeaways
-5. A strong call-to-action conclusion`,
-    tags: ["More Detailed", "SEO Focused"],
-  },
-  {
-    id: "v2",
-    title: "Concise Version",
-    content: `Act as a professional blogger.
-
-Write a blog post about [topic] that:
-- Uses simple, clear language
-- Includes 3 main points with examples
-- Has an engaging intro and conclusion
-- Is approximately 800 words
-
-Target: General audience
-Style: Friendly and informative`,
-    tags: ["Shorter", "Beginner Friendly"],
-  },
-]
+interface OptimizationResult {
+  id: string
+  title: string
+  content: string
+  tags: string[]
+}
 
 const pageVariants = {
   initial: { opacity: 0, y: 20 },
@@ -76,14 +43,28 @@ export default function DashboardPage() {
   const [mounted, setMounted] = useState(false)
   const [prompt, setPrompt] = useState("")
   const [promptTitle, setPromptTitle] = useState("Untitled Prompt")
-  const [selectedModel, setSelectedModel] = useState("gpt-4")
   const [isOptimizing, setIsOptimizing] = useState(false)
-  const [results, setResults] = useState(mockResults)
+  const [results, setResults] = useState<OptimizationResult[]>([])
   const [showResults, setShowResults] = useState(false)
+  const [optimizeError, setOptimizeError] = useState<string | null>(null)
 
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
   const [showShortcutsModal, setShowShortcutsModal] = useState(false)
+  
+  // 使用 ModelConfigContext 管理模型选择
+  const { settings, updateSettings, availableModels } = useModelConfig()
+  const selectedModel = settings.model
+  
+  const handleModelChange = useCallback((modelId: string) => {
+    const model = availableModels.find(m => m.id === modelId)
+    if (model) {
+      updateSettings({ 
+        model: modelId, 
+        provider: model.provider as any 
+      })
+    }
+  }, [availableModels, updateSettings])
 
   useEffect(() => {
     setMounted(true)
@@ -106,19 +87,112 @@ export default function DashboardPage() {
   }, [])
 
   const handleOptimize = useCallback(async () => {
-    if (!prompt.trim()) return
+    if (!prompt.trim()) {
+      toast.error("Please enter a prompt to optimize")
+      return
+    }
+    
     setIsOptimizing(true)
     setShowResults(true)
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    setIsOptimizing(false)
-  }, [prompt])
+    setOptimizeError(null)
+    
+    try {
+      const response = await fetch('/api/optimize/quick', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: prompt,
+          save_result: true,
+          title: promptTitle,
+          provider: settings.provider, // 传递用户选择的 provider
+        }),
+      })
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Optimization failed')
+      }
+      
+      if (data.success && data.data) {
+        // Create result objects from API response
+        const optimizedResults: OptimizationResult[] = [
+          {
+            id: data.data.id || 'v1',
+            title: "Optimized Version",
+            content: data.data.optimized_content || data.data.content,
+            tags: ["AI Optimized"],
+          },
+        ]
+        
+        // If we have the original, add a comparison version
+        if (data.data.original_content) {
+          optimizedResults.push({
+            id: 'original',
+            title: "Original",
+            content: data.data.original_content,
+            tags: ["Original"],
+          })
+        }
+        
+        setResults(optimizedResults)
+        toast.success("Prompt optimized successfully!")
+      } else {
+        throw new Error('Invalid response format')
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to optimize prompt'
+      setOptimizeError(errorMessage)
+      
+      // 根据错误类型显示不同的提示
+      if (errorMessage.includes('API Key') || errorMessage.includes('未配置')) {
+        toast.error(errorMessage, {
+          description: 'Go to Settings → Models to configure your API key',
+          action: {
+            label: 'Configure',
+            onClick: () => window.location.href = '/dashboard/models',
+          },
+          duration: 8000,
+        })
+      } else {
+        toast.error(errorMessage)
+      }
+      console.error('Optimization error:', error)
+    } finally {
+      setIsOptimizing(false)
+    }
+  }, [prompt, promptTitle, settings.provider])
 
   const handleInsertSnippet = (snippet: string) => {
     setPrompt((prev) => prev + (prev ? "\n\n" : "") + snippet)
   }
 
-  const handleSaveTemplate = (data: { name: string; description: string; category: string }) => {
-    console.log("Saving template:", data, "Content:", prompt)
+  const handleSaveTemplate = async (data: { name: string; description: string; category: string }) => {
+    try {
+      const response = await fetch('/api/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: data.name,
+          description: data.description,
+          category: data.category,
+          content: prompt,
+          tags: [],
+        }),
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to save template')
+      }
+      
+      toast.success("Template saved successfully!")
+      setShowSaveTemplateModal(false)
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save template'
+      toast.error(errorMessage)
+      console.error('Save template error:', error)
+    }
   }
 
   useEffect(() => {
@@ -160,7 +234,7 @@ export default function DashboardPage() {
       <AppHeader
         projectName={promptTitle}
         selectedModel={selectedModel}
-        onModelChange={setSelectedModel}
+        onModelChange={handleModelChange}
         onOptimize={handleOptimize}
         isOptimizing={isOptimizing}
         onSaveAsTemplate={() => setShowSaveTemplateModal(true)}
@@ -224,7 +298,7 @@ export default function DashboardPage() {
       <AppHeader
         projectName={promptTitle}
         selectedModel={selectedModel}
-        onModelChange={setSelectedModel}
+        onModelChange={handleModelChange}
         onOptimize={handleOptimize}
         isOptimizing={isOptimizing}
         onSaveAsTemplate={() => setShowSaveTemplateModal(true)}

@@ -8,6 +8,7 @@ export const translations = {
       docs: "Docs",
       signIn: "Sign in",
       getStarted: "Get Started",
+      dashboard: "Go to Dashboard",
     },
     // Hero Section
     hero: {
@@ -657,6 +658,7 @@ export const translations = {
       docs: "文档",
       signIn: "登录",
       getStarted: "开始使用",
+      dashboard: "进入控制台",
     },
     // Hero Section
     hero: {

@@ -373,6 +373,7 @@ export class ModelsService {
    */
   private static isRecommendedModel(modelId: string): boolean {
     const recommended = [
+      'google/gemini-3-pro-preview', // 默认免费试用模型
       'gpt-4o',
       'gpt-4o-mini',
       'claude-3-5-sonnet',

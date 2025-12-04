@@ -65,7 +65,7 @@ export type ListPromptsInput = z.infer<typeof ListPromptsSchema>
 // 快速优化请求
 export const QuickOptimizeSchema = z.object({
   content: z.string().min(1, '提示词内容不能为空').max(10000, '提示词内容过长'),
-  provider: AIProvider.optional().default('openai'),
+  provider: AIProvider.optional().default('openrouter'),
   save_result: z.boolean().optional().default(false),
   title: z.string().max(200).optional(),
 })
@@ -74,7 +74,7 @@ export type QuickOptimizeInput = z.infer<typeof QuickOptimizeSchema>
 // 深度优化请求
 export const DeepOptimizeSchema = z.object({
   content: z.string().min(1, '提示词内容不能为空').max(10000, '提示词内容过长'),
-  provider: AIProvider.optional().default('openai'),
+  provider: AIProvider.optional().default('openrouter'),
   max_iterations: z.number().int().min(1).max(5).optional().default(3),
   target_score: z.number().min(0).max(100).optional().default(85),
   save_result: z.boolean().optional().default(true),
@@ -100,7 +100,7 @@ export type JobQueryInput = z.infer<typeof JobQuerySchema>
 export const EvaluatePromptSchema = z.object({
   prompt_id: z.string().uuid().optional(),
   content: z.string().min(1).max(15000),
-  provider: AIProvider.optional().default('openai'),
+  provider: AIProvider.optional().default('openrouter'),
 })
 export type EvaluatePromptInput = z.infer<typeof EvaluatePromptSchema>
 

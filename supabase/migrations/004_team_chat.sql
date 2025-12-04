@@ -30,31 +30,8 @@ CREATE TRIGGER update_teams_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- RLS策略
+-- RLS (先启用，策略在 team_members 表创建后添加)
 ALTER TABLE public.teams ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Team members can view team"
-    ON public.teams FOR SELECT
-    USING (
-        auth.uid() = owner_id OR
-        EXISTS (
-            SELECT 1 FROM public.team_members
-            WHERE team_members.team_id = teams.id
-            AND team_members.user_id = auth.uid()
-        )
-    );
-
-CREATE POLICY "Team owner can update team"
-    ON public.teams FOR UPDATE
-    USING (auth.uid() = owner_id);
-
-CREATE POLICY "Users can create teams"
-    ON public.teams FOR INSERT
-    WITH CHECK (auth.uid() = owner_id);
-
-CREATE POLICY "Team owner can delete team"
-    ON public.teams FOR DELETE
-    USING (auth.uid() = owner_id);
 
 -- =====================================================
 -- 2. team_members 表 - 团队成员
@@ -108,6 +85,32 @@ CREATE POLICY "Team admin can manage members"
             AND tm.role IN ('owner', 'admin')
         )
     );
+
+-- =====================================================
+-- 2.1 teams 表 RLS 策略 (需要 team_members 表存在)
+-- =====================================================
+CREATE POLICY "Team members can view team"
+    ON public.teams FOR SELECT
+    USING (
+        auth.uid() = owner_id OR
+        EXISTS (
+            SELECT 1 FROM public.team_members
+            WHERE team_members.team_id = teams.id
+            AND team_members.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Team owner can update team"
+    ON public.teams FOR UPDATE
+    USING (auth.uid() = owner_id);
+
+CREATE POLICY "Users can create teams"
+    ON public.teams FOR INSERT
+    WITH CHECK (auth.uid() = owner_id);
+
+CREATE POLICY "Team owner can delete team"
+    ON public.teams FOR DELETE
+    USING (auth.uid() = owner_id);
 
 -- =====================================================
 -- 3. team_messages 表 - 团队聊天消息
