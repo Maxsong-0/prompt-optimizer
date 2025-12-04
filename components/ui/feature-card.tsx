@@ -28,7 +28,7 @@ export function FeatureCard({ icon: Icon, title, description, className, index =
         transition: { duration: 0.3 },
       }}
       className={cn(
-        "group relative p-6 rounded-xl bg-card border border-border transition-colors duration-300 hover:border-border-hover cursor-pointer",
+        "group relative p-6 rounded-xl bg-card/50 border border-border/50 backdrop-blur-sm transition-colors duration-300 hover:border-border-hover cursor-pointer",
         className,
       )}
     >

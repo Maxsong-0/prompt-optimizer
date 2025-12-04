@@ -186,6 +186,67 @@ A: 尝试清除浏览器缓存，或使用隐身模式测试。
 
 ---
 
+## Resend 邮件服务配置
+
+Resend 用于发送邮箱验证码和通知邮件。**生产环境必须配置**，否则用户无法完成注册。
+
+### 获取 Resend API Key
+
+1. 访问 https://resend.com
+2. 使用 GitHub 或邮箱注册/登录
+3. 进入 Dashboard，点击 "API Keys"
+4. 点击 "Create API Key"
+5. 复制生成的 Key（格式：`re_xxxxxxxxxx`）
+
+### 配置环境变量
+
+在 `.env.local` 中添加：
+
+```bash
+# Resend 邮件服务
+RESEND_API_KEY=re_xxxxxxxxxx
+```
+
+### Supabase 配置
+
+Resend SMTP 已在 `supabase/config.toml` 中配置：
+
+```toml
+[auth.email.smtp]
+enabled = true
+host = "smtp.resend.com"
+port = 465
+user = "resend"
+pass = "env(RESEND_API_KEY)"
+admin_email = "noreply@promto.org"
+sender_name = "Promto"
+```
+
+### 域名验证（可选但推荐）
+
+如果你有自己的域名，建议在 Resend 中验证域名以提高邮件送达率：
+
+1. 在 Resend Dashboard 点击 "Domains"
+2. 添加你的域名
+3. 按照指引添加 DNS 记录（MX, TXT）
+4. 等待验证完成
+
+### 本地开发测试
+
+如果未配置 Resend，本地开发时可以使用 Mailpit 查看邮件：
+
+- 访问 http://localhost:54324
+- 所有发送的邮件都会显示在这里
+
+### 免费额度
+
+Resend 免费计划：
+- 100 封/天
+- 3,000 封/月
+- 足够大多数小型项目使用
+
+---
+
 ## 应用配置
 
 ```bash

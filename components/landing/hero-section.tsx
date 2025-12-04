@@ -23,13 +23,13 @@ export function HeroSection() {
   }
 
   return (
-    <section className="relative pt-32 pb-20 overflow-hidden">
+    <section className="relative min-h-screen flex items-center overflow-hidden pt-16">
       {/* Animated Background Glow */}
       <motion.div
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-gradient-to-br from-primary/30 to-accent/20 rounded-full blur-[120px] -z-10"
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-br from-primary/20 to-accent/15 rounded-full blur-[150px] -z-10"
         animate={{
           scale: [1, 1.1, 1],
-          opacity: [0.5, 0.7, 0.5],
+          opacity: [0.35, 0.5, 0.35],
         }}
         transition={{
           duration: 8,
@@ -42,7 +42,7 @@ export function HeroSection() {
         {[...Array(6)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute w-2 h-2 bg-accent/30 rounded-full"
+            className="absolute w-2 h-2 bg-accent/20 rounded-full blur-[1px]"
             style={{
               left: `${20 + i * 15}%`,
               top: `${30 + (i % 3) * 20}%`,
@@ -50,7 +50,7 @@ export function HeroSection() {
             animate={{
               y: [-20, 20, -20],
               x: [-10, 10, -10],
-              opacity: [0.3, 0.7, 0.3],
+              opacity: [0.2, 0.5, 0.2],
             }}
             transition={{
               duration: 4 + i,
@@ -62,7 +62,28 @@ export function HeroSection() {
         ))}
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Scroll indicator */}
+      <motion.div 
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1.5, duration: 0.5 }}
+      >
+        <span className="text-xs text-foreground-muted">Scroll to explore</span>
+        <motion.div
+          className="w-6 h-10 rounded-full border-2 border-foreground-muted/30 flex justify-center pt-2"
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
+        >
+          <motion.div
+            className="w-1.5 h-1.5 rounded-full bg-accent"
+            animate={{ y: [0, 12, 0] }}
+            transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+          />
+        </motion.div>
+      </motion.div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Left Content */}
           <div>

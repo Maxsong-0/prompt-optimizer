@@ -3,10 +3,11 @@
 import type React from "react"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { Mail, Lock, Eye, EyeOff, ArrowLeft } from "lucide-react"
+import dynamic from "next/dynamic"
+import { Mail, Lock, Eye, EyeOff, ArrowLeft, AlertCircle, Loader2, CheckCircle2, KeyRound } from "lucide-react"
 import { GradientButton } from "@/components/ui/gradient-button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,24 +15,204 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useLanguage } from "@/lib/i18n/language-context"
 import { motion, FormItem, AnimatedLink } from "@/components/ui/motion"
 
+// 动态导入 LightPillar 组件，避免 SSR 问题
+const LightPillar = dynamic(() => import("@/components/ui/light-pillar"), {
+  ssr: false,
+  loading: () => null
+})
+
+// 登录方式类型
+type LoginMethod = 'password' | 'otp'
+
+// OTP 状态类型
+type OtpStatus = 'idle' | 'sending' | 'sent' | 'error'
+
+// 邮箱状态类型
+type EmailStatus = 'idle' | 'checking' | 'registered' | 'not_registered' | 'error' | 'invalid'
+
+// 邮箱格式验证
+const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+
 export default function LoginPage() {
   const { t } = useLanguage()
   const router = useRouter()
+  const [loginMethod, setLoginMethod] = useState<LoginMethod>('password')
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [oauthLoading, setOauthLoading] = useState<'google' | 'github' | null>(null)
+  const [otpStatus, setOtpStatus] = useState<OtpStatus>('idle')
+  const [emailStatus, setEmailStatus] = useState<EmailStatus>('idle')
+  const [countdown, setCountdown] = useState(0)
+  const [loginError, setLoginError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     email: "",
     password: "",
+    otp: "",
     rememberMe: false,
   })
 
+  // 检查邮箱是否已注册
+  const checkEmail = useCallback(async (email: string) => {
+    if (!email || !isValidEmail(email)) {
+      setEmailStatus(email ? 'invalid' : 'idle')
+      return
+    }
+
+    setEmailStatus('checking')
+    
+    try {
+      const response = await fetch(`/api/auth/check-email?email=${encodeURIComponent(email)}`)
+      const data = await response.json()
+      
+      if (data.success) {
+        setEmailStatus(data.data.exists ? 'registered' : 'not_registered')
+      } else {
+        setEmailStatus('error')
+      }
+    } catch {
+      setEmailStatus('error')
+    }
+  }, [])
+
+  // debounce 邮箱检测
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (formData.email) {
+        checkEmail(formData.email)
+      } else {
+        setEmailStatus('idle')
+      }
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [formData.email, checkEmail])
+
+  // 倒计时效果
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [countdown])
+
+  // 发送验证码
+  const handleSendOtp = async () => {
+    if (!formData.email || countdown > 0) return
+    
+    // 邮箱格式验证
+    if (!isValidEmail(formData.email)) {
+      setLoginError(t.auth.login.invalidEmail || '请输入有效的邮箱地址')
+      return
+    }
+
+    // 检查邮箱是否已注册
+    if (emailStatus === 'not_registered') {
+      setLoginError(t.auth.login.emailNotRegistered || '该邮箱尚未注册，请先注册')
+      return
+    }
+
+    if (emailStatus !== 'registered') {
+      setLoginError(t.auth.login.checkEmailFirst || '请先验证邮箱')
+      return
+    }
+    
+    setOtpStatus('sending')
+    setLoginError(null)
+    
+    try {
+      const response = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email, type: 'login' }),
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        setOtpStatus('sent')
+        setCountdown(60) // 60秒倒计时
+      } else {
+        setOtpStatus('error')
+        setLoginError(data.error || t.auth.login.sendCodeError || '发送验证码失败')
+      }
+    } catch {
+      setOtpStatus('error')
+      setLoginError(t.auth.login.networkError || '网络错误，请稍后重试')
+    }
+  }
+
+  // 密码登录
+  const handlePasswordLogin = async () => {
+    setIsLoading(true)
+    setLoginError(null)
+    
+    try {
+      const response = await fetch('/api/auth/signin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        router.push("/dashboard")
+      } else {
+        setLoginError(data.error || t.auth.login.loginError || '登录失败')
+      }
+    } catch {
+      setLoginError(t.auth.login.networkError || '网络错误，请稍后重试')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // 验证码登录
+  const handleOtpLogin = async () => {
+    if (!formData.otp || formData.otp.length !== 6) {
+      setLoginError(t.auth.login.otpRequired || '请输入6位验证码')
+      return
+    }
+    
+    setIsLoading(true)
+    setLoginError(null)
+    
+    try {
+      const response = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          otp: formData.otp,
+          type: 'email',
+        }),
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        router.push("/dashboard")
+      } else {
+        setLoginError(data.error || t.auth.login.otpInvalid || '验证码错误')
+      }
+    } catch {
+      setLoginError(t.auth.login.networkError || '网络错误，请稍后重试')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    setIsLoading(false)
-    router.push("/dashboard")
+    
+    if (loginMethod === 'password') {
+      await handlePasswordLogin()
+    } else {
+      await handleOtpLogin()
+    }
   }
 
   // OAuth登录处理
@@ -41,13 +222,12 @@ export default function LoginPage() {
       const response = await fetch('/api/auth/oauth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider }),
+        body: JSON.stringify({ provider, redirect_to: '/dashboard' }),
       })
       
       const data = await response.json()
       
       if (data.success && data.data?.url) {
-        // 重定向到OAuth提供商
         window.location.href = data.data.url
       } else {
         console.error('OAuth error:', data.error || 'Unknown error')
@@ -63,7 +243,7 @@ export default function LoginPage() {
 
   return (
     <motion.div
-      className="min-h-screen bg-background flex"
+      className="min-h-screen bg-background flex overflow-hidden"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
@@ -75,19 +255,22 @@ export default function LoginPage() {
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] }}
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-accent/20" />
-        <motion.div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-br from-primary/30 to-accent/20 rounded-full blur-[120px]"
-          animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.5, 0.8, 0.5],
-          }}
-          transition={{
-            duration: 4,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "easeInOut",
-          }}
-        />
+        {/* LightPillar 动态背景 */}
+        <div className="absolute inset-0 backdrop-blur-[2px]">
+          <LightPillar
+            topColor="#38BDF8"
+            bottomColor="#818CF8"
+            intensity={0.55}
+            rotationSpeed={0.15}
+            glowAmount={0.004}
+            pillarWidth={2.0}
+            pillarHeight={0.15}
+            noiseIntensity={0.35}
+            pillarRotation={-35}
+            interactive={false}
+            mixBlendMode="normal"
+          />
+        </div>
 
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           <Link href="/" className="flex items-center gap-2">
@@ -186,72 +369,224 @@ export default function LoginPage() {
             <span className="text-xl font-bold text-foreground">Promto</span>
           </motion.div>
 
-          <FormItem index={0} className="mb-8">
+          <FormItem index={0} className="mb-6">
             <h2 className="text-2xl font-bold text-foreground mb-2">{t.auth.login.title}</h2>
             <p className="text-foreground-secondary">{t.auth.login.subtitle}</p>
           </FormItem>
 
+          {/* 登录方式切换 Tab */}
+          <FormItem index={1} className="mb-6">
+            <div className="flex bg-muted/50 rounded-lg p-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginMethod('password')
+                  setLoginError(null)
+                }}
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
+                  loginMethod === 'password'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-foreground-muted hover:text-foreground'
+                }`}
+              >
+                {t.auth.login.passwordLogin || '密码登录'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginMethod('otp')
+                  setLoginError(null)
+                }}
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
+                  loginMethod === 'otp'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-foreground-muted hover:text-foreground'
+                }`}
+              >
+                {t.auth.login.otpLogin || '验证码登录'}
+              </button>
+            </div>
+          </FormItem>
+
           <form onSubmit={handleSubmit} className="space-y-5">
-            <FormItem index={1} className="space-y-2">
+            {/* 邮箱输入 */}
+            <FormItem index={2} className="space-y-2">
               <Label htmlFor="email">{t.auth.login.email}</Label>
-              <motion.div className="relative" whileFocus={{ scale: 1.02 }}>
+              <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-muted" />
                 <Input
                   id="email"
                   type="email"
                   placeholder="you@example.com"
-                  className="pl-10"
+                  className={`pl-10 pr-10 ${
+                    emailStatus === 'not_registered' ? 'border-yellow-500 focus-visible:ring-yellow-500' : 
+                    emailStatus === 'registered' ? 'border-green-500 focus-visible:ring-green-500' : ''
+                  }`}
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
                 />
-              </motion.div>
-            </FormItem>
-
-            <FormItem index={2} className="space-y-2">
-              <Label htmlFor="password">{t.auth.login.password}</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-muted" />
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  className="pl-10 pr-10"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required
-                />
-                <motion.button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-muted hover:text-foreground transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
+                {/* 邮箱状态图标 */}
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {emailStatus === 'checking' && (
+                    <Loader2 className="w-5 h-5 text-foreground-muted animate-spin" />
+                  )}
+                  {emailStatus === 'registered' && (
+                    <CheckCircle2 className="w-5 h-5 text-green-500" />
+                  )}
+                  {emailStatus === 'not_registered' && (
+                    <AlertCircle className="w-5 h-5 text-yellow-500" />
+                  )}
+                  {emailStatus === 'invalid' && formData.email && (
+                    <AlertCircle className="w-5 h-5 text-red-500" />
+                  )}
+                </div>
+              </div>
+              {/* 邮箱状态提示 */}
+              {emailStatus === 'not_registered' && (
+                <motion.p 
+                  className="text-sm text-yellow-500 flex items-center gap-1"
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </motion.button>
-              </div>
+                  <AlertCircle className="w-4 h-4" />
+                  {t.auth.login.emailNotRegistered || '该邮箱尚未注册'}
+                  <Link href="/register" className="underline ml-1">
+                    {t.auth.login.goRegister || '去注册'}
+                  </Link>
+                </motion.p>
+              )}
+              {emailStatus === 'registered' && (
+                <motion.p 
+                  className="text-sm text-green-500 flex items-center gap-1"
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  {t.auth.login.emailRegistered || '邮箱已注册'}
+                </motion.p>
+              )}
+              {emailStatus === 'invalid' && formData.email && (
+                <motion.p 
+                  className="text-sm text-red-500 flex items-center gap-1"
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <AlertCircle className="w-4 h-4" />
+                  {t.auth.login.invalidEmail || '请输入有效的邮箱地址'}
+                </motion.p>
+              )}
             </FormItem>
 
-            <FormItem index={3} className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="remember"
-                  checked={formData.rememberMe}
-                  onCheckedChange={(checked) => setFormData({ ...formData, rememberMe: checked as boolean })}
-                />
-                <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">
-                  {t.auth.login.rememberMe}
-                </Label>
-              </div>
-              <Link href="/forgot-password">
-                <AnimatedLink className="text-sm text-accent hover:underline">
-                  {t.auth.login.forgotPassword}
-                </AnimatedLink>
-              </Link>
-            </FormItem>
+            {/* 密码登录方式 */}
+            {loginMethod === 'password' && (
+              <>
+                <FormItem index={3} className="space-y-2">
+                  <Label htmlFor="password">{t.auth.login.password}</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-muted" />
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      className="pl-10 pr-10"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      required
+                    />
+                    <motion.button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-muted hover:text-foreground transition-colors"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </motion.button>
+                  </div>
+                </FormItem>
 
-            <FormItem index={4}>
+                <FormItem index={4} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="remember"
+                      checked={formData.rememberMe}
+                      onCheckedChange={(checked) => setFormData({ ...formData, rememberMe: checked as boolean })}
+                    />
+                    <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">
+                      {t.auth.login.rememberMe}
+                    </Label>
+                  </div>
+                  <Link href="/forgot-password">
+                    <AnimatedLink className="text-sm text-accent hover:underline">
+                      {t.auth.login.forgotPassword}
+                    </AnimatedLink>
+                  </Link>
+                </FormItem>
+              </>
+            )}
+
+            {/* 验证码登录方式 */}
+            {loginMethod === 'otp' && (
+              <FormItem index={3} className="space-y-2">
+                <Label htmlFor="otp">{t.auth.login.verificationCode || '验证码'}</Label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-muted" />
+                    <Input
+                      id="otp"
+                      type="text"
+                      placeholder="000000"
+                      className="pl-10"
+                      maxLength={6}
+                      value={formData.otp}
+                      onChange={(e) => setFormData({ ...formData, otp: e.target.value.replace(/\D/g, '') })}
+                    />
+                  </div>
+                  <GradientButton
+                    type="button"
+                    variant="secondary"
+                    onClick={handleSendOtp}
+                    disabled={!formData.email || countdown > 0 || otpStatus === 'sending'}
+                    className="whitespace-nowrap min-w-[120px]"
+                  >
+                    {otpStatus === 'sending' ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : countdown > 0 ? (
+                      `${countdown}s`
+                    ) : (
+                      t.auth.login.sendCode || '发送验证码'
+                    )}
+                  </GradientButton>
+                </div>
+                {otpStatus === 'sent' && (
+                  <motion.p 
+                    className="text-sm text-green-500 flex items-center gap-1"
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    {t.auth.login.codeSent || '验证码已发送，请查收邮件'}
+                  </motion.p>
+                )}
+              </FormItem>
+            )}
+
+            {/* 错误提示 */}
+            {loginError && (
+              <FormItem index={5}>
+                <motion.div 
+                  className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm flex items-center gap-2"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  {loginError}
+                </motion.div>
+              </FormItem>
+            )}
+
+            <FormItem index={6}>
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="relative">
                 <motion.div
                   className="absolute inset-0 rounded-full bg-gradient-to-r from-primary to-accent opacity-0"
@@ -291,7 +626,7 @@ export default function LoginPage() {
             </FormItem>
           </form>
 
-          <FormItem index={5} className="mt-6">
+          <FormItem index={7} className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-border" />
@@ -372,7 +707,7 @@ export default function LoginPage() {
             </div>
           </FormItem>
 
-          <FormItem index={6}>
+          <FormItem index={8}>
             <p className="mt-8 text-center text-sm text-foreground-secondary">
               {t.auth.login.noAccount}{" "}
               <Link href="/register">

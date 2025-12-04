@@ -3,16 +3,32 @@
 import type React from "react"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { Mail, Lock, Eye, EyeOff, User, ArrowLeft, Check } from "lucide-react"
+import dynamic from "next/dynamic"
+import { Mail, Lock, Eye, EyeOff, User, ArrowLeft, Check, AlertCircle, Loader2, CheckCircle2, Phone, KeyRound } from "lucide-react"
 import { GradientButton } from "@/components/ui/gradient-button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useLanguage } from "@/lib/i18n/language-context"
 import { motion, FormItem, AnimatedLink } from "@/components/ui/motion"
+
+// 动态导入 LightPillar 组件，避免 SSR 问题
+const LightPillar = dynamic(() => import("@/components/ui/light-pillar"), {
+  ssr: false,
+  loading: () => null
+})
+
+// 邮箱状态类型
+type EmailStatus = 'idle' | 'checking' | 'available' | 'taken' | 'error' | 'invalid'
+
+// 验证码状态类型
+type OtpStatus = 'idle' | 'sending' | 'sent' | 'error'
+
+// 邮箱格式验证
+const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
 export default function RegisterPage() {
   const { t } = useLanguage()
@@ -21,23 +37,185 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [oauthLoading, setOauthLoading] = useState<'google' | 'github' | null>(null)
+  const [emailStatus, setEmailStatus] = useState<EmailStatus>('idle')
+  const [otpStatus, setOtpStatus] = useState<OtpStatus>('idle')
+  const [countdown, setCountdown] = useState(0)
+  const [registerError, setRegisterError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [formData, setFormData] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
+    otp: "",
     password: "",
     confirmPassword: "",
+    phone: "",
     agreeTerms: false,
   })
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (formData.password !== formData.confirmPassword) {
+  // 倒计时效果
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [countdown])
+
+  // 检查邮箱是否已注册（debounce）
+  const checkEmail = useCallback(async (email: string) => {
+    if (!email || !isValidEmail(email)) {
+      setEmailStatus(email ? 'invalid' : 'idle')
       return
     }
+
+    setEmailStatus('checking')
+    
+    try {
+      const response = await fetch(`/api/auth/check-email?email=${encodeURIComponent(email)}`)
+      const data = await response.json()
+      
+      if (data.success) {
+        setEmailStatus(data.data.exists ? 'taken' : 'available')
+      } else {
+        setEmailStatus('error')
+      }
+    } catch {
+      setEmailStatus('error')
+    }
+  }, [])
+
+  // debounce 邮箱检测
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (formData.email) {
+        checkEmail(formData.email)
+      } else {
+        setEmailStatus('idle')
+      }
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [formData.email, checkEmail])
+
+  // 发送验证码
+  const handleSendOtp = async () => {
+    if (emailStatus !== 'available' || countdown > 0) return
+    
+    setOtpStatus('sending')
+    setRegisterError(null)
+    
+    try {
+      const response = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email, type: 'signup' }),
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        setOtpStatus('sent')
+        setCountdown(60) // 60秒倒计时
+        setSuccessMessage(t.auth.register.codeSent || '验证码已发送，请查收邮件')
+      } else {
+        setOtpStatus('error')
+        setRegisterError(data.error || t.auth.register.sendCodeError || '发送验证码失败')
+      }
+    } catch {
+      setOtpStatus('error')
+      setRegisterError(t.auth.register.networkError || '网络错误，请稍后重试')
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setRegisterError(null)
+    setSuccessMessage(null)
+    
+    // 验证必填字段
+    if (!formData.firstName.trim() || !formData.lastName.trim()) {
+      setRegisterError(t.auth.register.nameRequired || '请输入姓名')
+      return
+    }
+
+    // 验证密码长度
+    if (formData.password.length < 6) {
+      setRegisterError(t.auth.register.passwordTooShort || '密码至少6位')
+      return
+    }
+
+    // 验证密码匹配
+    if (formData.password !== formData.confirmPassword) {
+      setRegisterError(t.auth.register.passwordMismatch || '密码不匹配')
+      return
+    }
+
+    // 验证邮箱状态
+    if (emailStatus === 'taken') {
+      setRegisterError(t.auth.register.emailTaken || '该邮箱已被注册')
+      return
+    }
+
+    if (emailStatus !== 'available') {
+      setRegisterError(t.auth.register.checkEmail || '请先验证邮箱')
+      return
+    }
+
+    // 验证验证码
+    if (!formData.otp || formData.otp.length !== 6) {
+      setRegisterError(t.auth.register.otpRequired || '请输入6位验证码')
+      return
+    }
+
     setIsLoading(true)
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    setIsLoading(false)
-    router.push("/dashboard")
+    
+    try {
+      // 先验证 OTP（这会自动创建/登录用户）
+      const verifyResponse = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          otp: formData.otp,
+          type: 'signup',
+        }),
+      })
+
+      const verifyData = await verifyResponse.json()
+
+      if (!verifyData.success) {
+        setRegisterError(verifyData.error || t.auth.register.otpInvalid || '验证码错误')
+        setIsLoading(false)
+        return
+      }
+
+      // OTP 验证成功，用户已登录
+      // 更新用户资料和密码
+      const updateResponse = await fetch('/api/auth/update-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          first_name: formData.firstName.trim(),
+          last_name: formData.lastName.trim(),
+          phone: formData.phone.trim() || undefined,
+          password: formData.password,
+        }),
+      })
+
+      const updateData = await updateResponse.json()
+
+      if (updateData.success) {
+        router.push("/dashboard")
+      } else {
+        // 即使更新失败，用户已登录，可以进入 dashboard
+        console.error('Profile update failed:', updateData.error)
+        router.push("/dashboard")
+      }
+    } catch {
+      setRegisterError(t.auth.register.networkError || '网络错误，请稍后重试')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   // OAuth登录处理
@@ -68,7 +246,7 @@ export default function RegisterPage() {
 
   return (
     <motion.div
-      className="min-h-screen bg-background flex"
+      className="min-h-screen bg-background flex overflow-hidden"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
@@ -80,20 +258,22 @@ export default function RegisterPage() {
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] }}
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-accent/20 via-background to-primary/20" />
-        <motion.div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-br from-accent/30 to-primary/20 rounded-full blur-[120px]"
-          animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.5, 0.8, 0.5],
-            rotate: [0, 180, 360],
-          }}
-          transition={{
-            duration: 8,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "easeInOut",
-          }}
-        />
+        {/* LightPillar 动态背景 */}
+        <div className="absolute inset-0 backdrop-blur-[2px]">
+          <LightPillar
+            topColor="#38BDF8"
+            bottomColor="#818CF8"
+            intensity={0.55}
+            rotationSpeed={0.15}
+            glowAmount={0.004}
+            pillarWidth={2.0}
+            pillarHeight={0.15}
+            noiseIntensity={0.35}
+            pillarRotation={-35}
+            interactive={false}
+            mixBlendMode="normal"
+          />
+        </div>
 
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           <Link href="/" className="flex items-center gap-2">
@@ -157,7 +337,7 @@ export default function RegisterPage() {
 
       {/* Right Panel - Register Form */}
       <motion.div
-        className="flex-1 flex flex-col justify-center px-6 sm:px-12 lg:px-16 py-12"
+        className="flex-1 flex flex-col justify-center px-6 sm:px-12 lg:px-16 py-12 overflow-y-auto"
         initial={{ x: 100, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] }}
@@ -195,29 +375,49 @@ export default function RegisterPage() {
             <span className="text-xl font-bold text-foreground">Promto</span>
           </motion.div>
 
-          <FormItem index={0} className="mb-8">
+          <FormItem index={0} className="mb-6">
             <h2 className="text-2xl font-bold text-foreground mb-2">{t.auth.register.title}</h2>
             <p className="text-foreground-secondary">{t.auth.register.subtitle}</p>
           </FormItem>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <FormItem index={1} className="space-y-2">
-              <Label htmlFor="name">{t.auth.register.name}</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-muted" />
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="John Doe"
-                  className="pl-10"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                />
-              </div>
-            </FormItem>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* 姓名行 */}
+            <div className="grid grid-cols-2 gap-3">
+              <FormItem index={1} className="space-y-2">
+                <Label htmlFor="lastName">{t.auth.register.lastName || '姓'}</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-muted" />
+                  <Input
+                    id="lastName"
+                    type="text"
+                    placeholder="张"
+                    className="pl-10"
+                    value={formData.lastName}
+                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    required
+                  />
+                </div>
+              </FormItem>
 
-            <FormItem index={2} className="space-y-2">
+              <FormItem index={2} className="space-y-2">
+                <Label htmlFor="firstName">{t.auth.register.firstName || '名'}</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-muted" />
+                  <Input
+                    id="firstName"
+                    type="text"
+                    placeholder="三"
+                    className="pl-10"
+                    value={formData.firstName}
+                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    required
+                  />
+                </div>
+              </FormItem>
+            </div>
+
+            {/* 邮箱 */}
+            <FormItem index={3} className="space-y-2">
               <Label htmlFor="email">{t.auth.register.email}</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-muted" />
@@ -225,15 +425,109 @@ export default function RegisterPage() {
                   id="email"
                   type="email"
                   placeholder="you@example.com"
-                  className="pl-10"
+                  className={`pl-10 pr-10 ${
+                    emailStatus === 'taken' ? 'border-red-500 focus-visible:ring-red-500' : 
+                    emailStatus === 'available' ? 'border-green-500 focus-visible:ring-green-500' : ''
+                  }`}
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
                 />
+                {/* 邮箱状态图标 */}
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {emailStatus === 'checking' && (
+                    <Loader2 className="w-5 h-5 text-foreground-muted animate-spin" />
+                  )}
+                  {emailStatus === 'available' && (
+                    <CheckCircle2 className="w-5 h-5 text-green-500" />
+                  )}
+                  {emailStatus === 'taken' && (
+                    <AlertCircle className="w-5 h-5 text-red-500" />
+                  )}
+                  {emailStatus === 'invalid' && formData.email && (
+                    <AlertCircle className="w-5 h-5 text-yellow-500" />
+                  )}
+                </div>
               </div>
+              {/* 邮箱状态提示 */}
+              {emailStatus === 'taken' && (
+                <motion.p 
+                  className="text-sm text-red-500 flex items-center gap-1"
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <AlertCircle className="w-4 h-4" />
+                  {t.auth.register.emailTaken || '该邮箱已被注册，请直接登录'}
+                </motion.p>
+              )}
+              {emailStatus === 'available' && (
+                <motion.p 
+                  className="text-sm text-green-500 flex items-center gap-1"
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  {t.auth.register.emailAvailable || '邮箱可用'}
+                </motion.p>
+              )}
+              {emailStatus === 'invalid' && formData.email && (
+                <motion.p 
+                  className="text-sm text-yellow-500 flex items-center gap-1"
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <AlertCircle className="w-4 h-4" />
+                  {t.auth.register.emailInvalid || '请输入有效的邮箱地址'}
+                </motion.p>
+              )}
             </FormItem>
 
-            <FormItem index={3} className="space-y-2">
+            {/* 验证码 */}
+            <FormItem index={4} className="space-y-2">
+              <Label htmlFor="otp">{t.auth.register.verificationCode || '邮箱验证码'}</Label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-muted" />
+                  <Input
+                    id="otp"
+                    type="text"
+                    placeholder="000000"
+                    className="pl-10"
+                    maxLength={6}
+                    value={formData.otp}
+                    onChange={(e) => setFormData({ ...formData, otp: e.target.value.replace(/\D/g, '') })}
+                  />
+                </div>
+                <GradientButton
+                  type="button"
+                  variant="secondary"
+                  onClick={handleSendOtp}
+                  disabled={emailStatus !== 'available' || countdown > 0 || otpStatus === 'sending'}
+                  className="whitespace-nowrap min-w-[120px]"
+                >
+                  {otpStatus === 'sending' ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : countdown > 0 ? (
+                    `${countdown}s`
+                  ) : (
+                    t.auth.register.sendCode || '发送验证码'
+                  )}
+                </GradientButton>
+              </div>
+              {otpStatus === 'sent' && (
+                <motion.p 
+                  className="text-sm text-green-500 flex items-center gap-1"
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  {t.auth.register.codeSent || '验证码已发送，请查收邮件'}
+                </motion.p>
+              )}
+            </FormItem>
+
+            {/* 密码 */}
+            <FormItem index={5} className="space-y-2">
               <Label htmlFor="password">{t.auth.register.password}</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-muted" />
@@ -258,7 +552,8 @@ export default function RegisterPage() {
               </div>
             </FormItem>
 
-            <FormItem index={4} className="space-y-2">
+            {/* 确认密码 */}
+            <FormItem index={6} className="space-y-2">
               <Label htmlFor="confirmPassword">{t.auth.register.confirmPassword}</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-muted" />
@@ -283,7 +578,27 @@ export default function RegisterPage() {
               </div>
             </FormItem>
 
-            <FormItem index={5} className="flex items-start gap-2">
+            {/* 手机号（可选） */}
+            <FormItem index={7} className="space-y-2">
+              <Label htmlFor="phone">
+                {t.auth.register.phone || '手机号'}
+                <span className="text-foreground-muted ml-1">({t.auth.register.optional || '可选'})</span>
+              </Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-muted" />
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="+86 138 0000 0000"
+                  className="pl-10"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                />
+              </div>
+            </FormItem>
+
+            {/* 条款 */}
+            <FormItem index={8} className="flex items-start gap-2">
               <Checkbox
                 id="terms"
                 checked={formData.agreeTerms}
@@ -302,7 +617,35 @@ export default function RegisterPage() {
               </Label>
             </FormItem>
 
-            <FormItem index={6}>
+            {/* 错误提示 */}
+            {registerError && (
+              <FormItem index={9}>
+                <motion.div 
+                  className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm flex items-center gap-2"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  {registerError}
+                </motion.div>
+              </FormItem>
+            )}
+
+            {/* 成功提示 */}
+            {successMessage && (
+              <FormItem index={9}>
+                <motion.div 
+                  className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-500 text-sm flex items-center gap-2"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  {successMessage}
+                </motion.div>
+              </FormItem>
+            )}
+
+            <FormItem index={10}>
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="relative">
                 <motion.div
                   className="absolute inset-0 rounded-full bg-gradient-to-r from-primary to-accent opacity-0"
@@ -320,7 +663,7 @@ export default function RegisterPage() {
                   type="submit"
                   className="w-full relative z-10"
                   size="lg"
-                  disabled={isLoading || !formData.agreeTerms}
+                  disabled={isLoading || !formData.agreeTerms || emailStatus === 'taken' || emailStatus === 'checking'}
                 >
                   {isLoading ? (
                     <motion.span className="flex items-center gap-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -347,7 +690,7 @@ export default function RegisterPage() {
             </FormItem>
           </form>
 
-          <FormItem index={7} className="mt-6">
+          <FormItem index={11} className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-border" />
@@ -428,7 +771,7 @@ export default function RegisterPage() {
             </div>
           </FormItem>
 
-          <FormItem index={8}>
+          <FormItem index={12}>
             <p className="mt-8 text-center text-sm text-foreground-secondary">
               {t.auth.register.hasAccount}{" "}
               <Link href="/login">

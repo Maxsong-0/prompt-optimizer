@@ -26,8 +26,8 @@ export function PromptCard({ title, content, tags = [], variant = "default", cla
       className={cn(
         "group relative rounded-xl border transition-all duration-300",
         variant === "optimized"
-          ? "bg-gradient-to-br from-primary/10 to-accent/10 border-primary/30"
-          : "bg-card border-border",
+          ? "bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20 backdrop-blur-sm"
+          : "bg-card/50 border-border/50 backdrop-blur-sm",
         "hover:shadow-md",
         className,
       )}

@@ -73,6 +73,7 @@ const itemVariants = {
 }
 
 export default function DashboardPage() {
+  const [mounted, setMounted] = useState(false)
   const [prompt, setPrompt] = useState("")
   const [promptTitle, setPromptTitle] = useState("Untitled Prompt")
   const [selectedModel, setSelectedModel] = useState("gpt-4")
@@ -83,6 +84,26 @@ export default function DashboardPage() {
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
   const [showShortcutsModal, setShowShortcutsModal] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+    // 检查是否有需要重新优化的内容
+    const reoptimizeData = sessionStorage.getItem('promto-reoptimize')
+    if (reoptimizeData) {
+      try {
+        const { content, title } = JSON.parse(reoptimizeData)
+        if (content) {
+          setPrompt(content)
+        }
+        if (title) {
+          setPromptTitle(title)
+        }
+        sessionStorage.removeItem('promto-reoptimize')
+      } catch (e) {
+        console.error('Failed to parse reoptimize data:', e)
+      }
+    }
+  }, [])
 
   const handleOptimize = useCallback(async () => {
     if (!prompt.trim()) return
@@ -132,6 +153,64 @@ export default function DashboardPage() {
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [handleOptimize])
+
+  // 在客户端挂载前，直接渲染内容以避免黑屏
+  const content = (
+    <>
+      <AppHeader
+        projectName={promptTitle}
+        selectedModel={selectedModel}
+        onModelChange={setSelectedModel}
+        onOptimize={handleOptimize}
+        isOptimizing={isOptimizing}
+        onSaveAsTemplate={() => setShowSaveTemplateModal(true)}
+        onExport={() => setShowExportModal(true)}
+        onShowShortcuts={() => setShowShortcutsModal(true)}
+      />
+
+      <div className="flex-1 flex overflow-hidden">
+        <div className="w-full lg:w-[400px] xl:w-[450px] border-r border-border flex flex-col">
+          <PromptEditor value={prompt} onChange={setPrompt} title={promptTitle} onTitleChange={setPromptTitle} />
+          <VersionHistoryPanel
+            onRestore={(version) => console.log("Restore version:", version)}
+            onPreview={(version) => console.log("Preview version:", version)}
+          />
+        </div>
+
+        <div className="hidden lg:flex flex-1 flex-col">
+          <OptimizationResults results={showResults ? results : []} isLoading={isOptimizing} originalPrompt={prompt} />
+        </div>
+
+        <div className="hidden xl:flex w-[280px] border-l border-border">
+          <TipsPanel onInsertSnippet={handleInsertSnippet} />
+        </div>
+      </div>
+
+      <SaveTemplateModal
+        isOpen={showSaveTemplateModal}
+        onClose={() => setShowSaveTemplateModal(false)}
+        onSave={handleSaveTemplate}
+        promptContent={prompt}
+      />
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        promptTitle={promptTitle}
+        promptContent={prompt}
+        optimizedContent={results[0]?.content}
+      />
+      <KeyboardShortcutsModal isOpen={showShortcutsModal} onClose={() => setShowShortcutsModal(false)} />
+    </>
+  )
+
+  // 未挂载时直接渲染，避免黑屏
+  if (!mounted) {
+    return (
+      <div className="flex flex-col h-screen">
+        {content}
+      </div>
+    )
+  }
 
   return (
     <motion.div

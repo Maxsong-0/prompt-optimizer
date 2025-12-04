@@ -15,6 +15,8 @@ import {
   User,
   CreditCard,
   Bell,
+  Settings2,
+  MessageCircle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/lib/i18n/language-context"
@@ -27,7 +29,7 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
 
   const mainNavItems = [
     { icon: Beaker, label: t.dashboard.sidebar.promptLab, href: "/dashboard" },
@@ -41,6 +43,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     { icon: LayoutTemplate, label: t.dashboard.sidebar.templates, href: "/dashboard/templates" },
     { icon: Star, label: t.dashboard.sidebar.favorites, href: "/dashboard/favorites" },
     { icon: Users, label: t.dashboard.sidebar.teamSpace, href: "/dashboard/team", badge: t.dashboard.sidebar.pro },
+    { icon: MessageCircle, label: language === 'zh' ? '团队聊天' : 'Team Chat', href: "/dashboard/team/chat", badge: t.dashboard.sidebar.new },
+    { icon: Settings2, label: language === 'zh' ? '模型配置' : 'Models', href: "/dashboard/models" },
   ]
 
   const accountNavItems = [

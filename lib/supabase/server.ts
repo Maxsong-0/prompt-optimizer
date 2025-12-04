@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { isSupabaseEnabled } from './config'
 
@@ -31,6 +32,34 @@ export async function createClient() {
             // 这是预期的行为
           }
         },
+      },
+    }
+  )
+}
+
+/**
+ * 创建 Supabase Admin 客户端
+ * 使用 service role key，绑过 RLS 策略
+ * 仅在服务器端使用，用于管理操作
+ */
+export function createAdminClient() {
+  if (!isSupabaseEnabled()) {
+    throw new Error('Supabase is not configured. Please set environment variables.')
+  }
+  
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  
+  if (!serviceRoleKey) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set')
+  }
+
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    serviceRoleKey,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
       },
     }
   )

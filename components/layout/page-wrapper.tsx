@@ -1,7 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
-import type { ReactNode } from "react"
+import { useState, useEffect, type ReactNode } from "react"
 
 interface PageWrapperProps {
   children: ReactNode
@@ -9,6 +9,22 @@ interface PageWrapperProps {
 }
 
 export function PageWrapper({ children, className }: PageWrapperProps) {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // 在客户端挂载前，直接渲染内容以避免黑屏
+  // 挂载后使用动画效果
+  if (!mounted) {
+    return (
+      <div className={className}>
+        {children}
+      </div>
+    )
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20, filter: "blur(8px)" }}

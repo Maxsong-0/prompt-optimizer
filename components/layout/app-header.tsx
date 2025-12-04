@@ -91,8 +91,8 @@ export function AppHeader({
   }
 
   return (
-    <header className="h-14 border-b border-border bg-background/80 backdrop-blur-xl flex items-center justify-between px-4">
-      <div className="flex items-center gap-4">
+    <header className="h-14 border-b border-border bg-background/80 backdrop-blur-xl flex items-center justify-between px-4 relative z-20">
+      <div className="flex items-center gap-4 overflow-visible">
         <h1 className="text-sm font-medium text-foreground">{projectName}</h1>
         <ModelSelector value={selectedModel} onChange={onModelChange} />
       </div>

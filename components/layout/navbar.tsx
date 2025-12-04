@@ -24,7 +24,7 @@ export function Navbar() {
   const navLinks = [
     { href: "#features", label: t.nav.features },
     { href: "#pricing", label: t.nav.pricing },
-    { href: "/dashboard/templates", label: t.nav.templates },
+    { href: "/templates", label: t.nav.templates },
     { href: "/docs", label: t.nav.docs },
   ]
 
@@ -36,32 +36,34 @@ export function Navbar() {
       transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
     >
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo with hover animation */}
-          <Link href="/" className="flex items-center gap-2">
-            <motion.div
-              className="w-8 h-8 rounded-lg overflow-hidden"
-              whileHover={{ scale: 1.1, rotate: 5 }}
-              whileTap={{ scale: 0.95 }}
-              transition={{ type: "spring", stiffness: 400, damping: 15 }}
-            >
-              <Image src="/apple-icon.png" alt="Promto Logo" width={32} height={32} className="w-full h-full object-cover" />
-            </motion.div>
-            <motion.span
-              className="text-lg font-bold text-foreground"
-              whileHover={{
-                background: "linear-gradient(90deg, #4F46E5, #06B6D4)",
-                backgroundClip: "text",
-                WebkitBackgroundClip: "text",
-                color: "transparent",
-              }}
-            >
-              Promto
-            </motion.span>
-          </Link>
+        <div className="flex items-center h-16">
+          {/* Logo with hover animation - 左侧 flex-1 靠左对齐 */}
+          <div className="flex-1 flex items-center">
+            <Link href="/" className="flex items-center gap-2">
+              <motion.div
+                className="w-8 h-8 rounded-lg overflow-hidden"
+                whileHover={{ scale: 1.1, rotate: 5 }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ type: "spring", stiffness: 400, damping: 15 }}
+              >
+                <Image src="/apple-icon.png" alt="Promto Logo" width={32} height={32} className="w-full h-full object-cover" />
+              </motion.div>
+              <motion.span
+                className="text-lg font-bold text-foreground"
+                whileHover={{
+                  background: "linear-gradient(90deg, #4F46E5, #06B6D4)",
+                  backgroundClip: "text",
+                  WebkitBackgroundClip: "text",
+                  color: "transparent",
+                }}
+              >
+                Promto
+              </motion.span>
+            </Link>
+          </div>
 
-          {/* Desktop Navigation with staggered animation */}
-          <div className="hidden md:flex items-center gap-8">
+          {/* Desktop Navigation - 中间居中，固定宽度 */}
+          <div className="hidden md:flex items-center justify-center gap-8">
             {navLinks.map((link, index) => (
               <motion.div
                 key={link.href}
@@ -83,8 +85,8 @@ export function Navbar() {
             ))}
           </div>
 
-          {/* Right Actions with animations */}
-          <div className="hidden md:flex items-center gap-3">
+          {/* Right Actions - 右侧 flex-1 靠右对齐 */}
+          <div className="hidden md:flex flex-1 items-center justify-end gap-3">
             {/* Theme toggle with rotation animation */}
             <motion.button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
